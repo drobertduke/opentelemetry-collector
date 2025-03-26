@@ -10,8 +10,10 @@ import (
 type Config struct {
 	// TracesBufferSize is the maximum number of spans to keep in the buffer.
 	TracesBufferSize int `mapstructure:"traces_buffer_size"`
+
 	// MetricsBufferSize is the maximum number of metric data points to keep in the buffer.
 	MetricsBufferSize int `mapstructure:"metrics_buffer_size"`
+
 	// LogsBufferSize is the maximum number of log records to keep in the buffer.
 	LogsBufferSize int `mapstructure:"logs_buffer_size"`
 }
@@ -34,7 +36,7 @@ func (cfg *Config) Validate() error {
 func createDefaultConfig() component.Config {
 	return &Config{
 		TracesBufferSize:  10000,
-		MetricsBufferSize: 5000,
-		LogsBufferSize:    5000,
+		MetricsBufferSize: 10000,
+		LogsBufferSize:    10000,
 	}
 }

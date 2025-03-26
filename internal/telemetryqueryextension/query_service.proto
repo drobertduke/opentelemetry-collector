@@ -5,169 +5,174 @@ package telemetryquery;
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
-option go_package = "go.opentelemetry.io/collector/internal/telemetryqueryextension";
+option go_package = "github.com/dvroom/telemetrycollector/internal/telemetryqueryextension";
 
-// TelemetryQueryService provides a gRPC API for querying telemetry data from the ring buffer.
-service TelemetryQueryService {
-  // QueryTraces retrieves spans from the traces ring buffer.
-  rpc QueryTraces(TraceQueryRequest) returns (TraceQueryResponse);
-  
-  // QueryMetrics retrieves metrics from the metrics ring buffer.
-  rpc QueryMetrics(MetricQueryRequest) returns (MetricQueryResponse);
-  
-  // QueryLogs retrieves logs from the logs ring buffer.
-  rpc QueryLogs(LogQueryRequest) returns (LogQueryResponse);
-  
-  // SubscribeTraces streams new spans as they arrive in the ring buffer.
-  rpc SubscribeTraces(TraceQueryRequest) returns (stream TraceQueryResponse);
-  
-  // SubscribeMetrics streams new metrics as they arrive in the ring buffer.
-  rpc SubscribeMetrics(MetricQueryRequest) returns (stream MetricQueryResponse);
-  
-  // SubscribeLogs streams new logs as they arrive in the ring buffer.
-  rpc SubscribeLogs(LogQueryRequest) returns (stream LogQueryResponse);
-  
-  // GetBufferInfo returns information about the ring buffers.
-  rpc GetBufferInfo(google.protobuf.Empty) returns (BufferInfoResponse);
+// TelemetryType defines the type of telemetry data.
+enum TelemetryType {
+  TELEMETRY_TYPE_UNSPECIFIED = 0;
+  TELEMETRY_TYPE_TRACES = 1;
+  TELEMETRY_TYPE_METRICS = 2;
+  TELEMETRY_TYPE_LOGS = 3;
 }
 
-// TraceQueryRequest defines the parameters for querying traces.
-message TraceQueryRequest {
-  // Optional start time, if omitted we return all available.
-  google.protobuf.Timestamp start_time = 1;
+// QueryRequest is a request to query telemetry data from the ring buffer.
+message QueryRequest {
+  // Type of telemetry data to query.
+  TelemetryType telemetry_type = 1;
   
-  // Optional end time, if omitted we return up to the latest.
-  google.protobuf.Timestamp end_time = 2;
+  // Optional start time for filtering by time range.
+  google.protobuf.Timestamp start_time = 2;
   
-  // Optional service name to filter.
-  string service_name = 3;
+  // Optional end time for filtering by time range.
+  google.protobuf.Timestamp end_time = 3;
   
-  // Optional trace ID to filter.
+  // Optional trace ID for filtering by trace.
   string trace_id = 4;
   
-  // Optional span ID to filter.
-  string span_id = 5;
+  // Optional service name for filtering by service.
+  string service_name = 5;
   
-  // Optional limit on the number of results to return.
+  // Optional maximum number of results to return.
   int32 limit = 6;
+}
+
+// SubscribeRequest is a request to subscribe to telemetry data from the ring buffer.
+message SubscribeRequest {
+  // Type of telemetry data to subscribe to.
+  TelemetryType telemetry_type = 1;
   
-  // Optional flag to indicate immediate mode (for streaming).
-  bool immediate_mode = 7;
+  // Optional start time for filtering by time range.
+  google.protobuf.Timestamp start_time = 2;
+  
+  // Optional trace ID for filtering by trace.
+  string trace_id = 3;
+  
+  // Optional service name for filtering by service.
+  string service_name = 4;
 }
 
-// TraceQueryResponse contains spans matching the query.
-message TraceQueryResponse {
+// QueryResponse is a response containing telemetry data.
+message QueryResponse {
+  // Spans returned for trace queries.
   repeated Span spans = 1;
+  
+  // Metrics returned for metric queries.
+  repeated MetricDataPoint metrics = 2;
+  
+  // Logs returned for log queries.
+  repeated LogRecord logs = 3;
 }
 
-// Span represents a simplified span for the query API.
+// Span represents a trace span.
 message Span {
   string trace_id = 1;
   string span_id = 2;
   string parent_span_id = 3;
   string name = 4;
-  google.protobuf.Timestamp start_time = 5;
-  google.protobuf.Timestamp end_time = 6;
-  map<string, string> attributes = 7;
-  map<string, string> resource_attrs = 8;
-  int32 status_code = 9;
+  string kind = 5;
+  google.protobuf.Timestamp start_time = 6;
+  google.protobuf.Timestamp end_time = 7;
+  int64 duration_nanos = 8;
+  string status_code = 9;
   string status_message = 10;
+  string service_name = 11;
+  map<string, AttributeValue> attributes = 12;
 }
 
-// MetricQueryRequest defines the parameters for querying metrics.
-message MetricQueryRequest {
-  // Optional start time, if omitted we return all available.
-  google.protobuf.Timestamp start_time = 1;
-  
-  // Optional end time, if omitted we return up to the latest.
-  google.protobuf.Timestamp end_time = 2;
-  
-  // Optional service name to filter.
-  string service_name = 3;
-  
-  // Optional metric name to filter.
-  string metric_name = 4;
-  
-  // Optional limit on the number of results to return.
-  int32 limit = 5;
-  
-  // Optional flag to indicate immediate mode (for streaming).
-  bool immediate_mode = 6;
+// LogRecord represents a log record.
+message LogRecord {
+  string trace_id = 1;
+  string span_id = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  string severity_text = 4;
+  int32 severity_number = 5;
+  string body = 6;
+  string service_name = 7;
+  map<string, AttributeValue> attributes = 8;
 }
 
-// MetricQueryResponse contains metrics matching the query.
-message MetricQueryResponse {
-  repeated Metric metrics = 1;
-}
-
-// Metric represents a simplified metric for the query API.
-message Metric {
+// MetricDataPoint represents a metric data point.
+message MetricDataPoint {
   string name = 1;
   string description = 2;
   string unit = 3;
   string type = 4;
   google.protobuf.Timestamp timestamp = 5;
   oneof value {
-    double double_value = 6;
-    int64 int_value = 7;
-    bool bool_value = 8;
-    string string_value = 9;
+    int64 int_value = 6;
+    double double_value = 7;
+    Count count = 8;
   }
-  map<string, string> attributes = 10;
-  map<string, string> resource_attrs = 11;
+  string service_name = 9;
+  map<string, AttributeValue> attributes = 10;
 }
 
-// LogQueryRequest defines the parameters for querying logs.
-message LogQueryRequest {
-  // Optional start time, if omitted we return all available.
-  google.protobuf.Timestamp start_time = 1;
-  
-  // Optional end time, if omitted we return up to the latest.
-  google.protobuf.Timestamp end_time = 2;
-  
-  // Optional service name to filter.
-  string service_name = 3;
-  
-  // Optional severity text to filter.
-  string severity_text = 4;
-  
-  // Optional severity number to filter.
-  int32 severity_number = 5;
-  
-  // Optional body substring to filter.
-  string body_contains = 6;
-  
-  // Optional limit on the number of results to return.
-  int32 limit = 7;
-  
-  // Optional flag to indicate immediate mode (for streaming).
-  bool immediate_mode = 8;
+// Count is a simple count value.
+message Count {
+  int64 count = 1;
 }
 
-// LogQueryResponse contains logs matching the query.
-message LogQueryResponse {
-  repeated Log logs = 1;
+// AttributeValue represents a value of an attribute.
+message AttributeValue {
+  oneof value {
+    string string_value = 1;
+    int64 int_value = 2;
+    double double_value = 3;
+    bool bool_value = 4;
+    ArrayValue array_value = 5;
+    KeyValueList kvlist_value = 6;
+    bytes bytes_value = 7;
+  }
 }
 
-// Log represents a simplified log record for the query API.
-message Log {
-  google.protobuf.Timestamp timestamp = 1;
-  string severity_text = 2;
-  int32 severity_number = 3;
-  string body = 4;
-  map<string, string> attributes = 5;
-  map<string, string> resource_attrs = 6;
+// ArrayValue represents an array of values.
+message ArrayValue {
+  repeated AttributeValue values = 1;
+}
+
+// KeyValueList represents a list of key-value pairs.
+message KeyValueList {
+  repeated KeyValue values = 1;
+}
+
+// KeyValue represents a key-value pair.
+message KeyValue {
+  string key = 1;
+  AttributeValue value = 2;
 }
 
 // BufferInfo contains information about a ring buffer.
 message BufferInfo {
-  int32 capacity = 1;
+  // Type of telemetry data in the buffer.
+  TelemetryType telemetry_type = 1;
+  
+  // Current number of items in the buffer.
   int32 size = 2;
+  
+  // Maximum capacity of the buffer.
+  int32 capacity = 3;
+  
+  // Oldest timestamp in the buffer.
+  google.protobuf.Timestamp oldest_timestamp = 4;
+  
+  // Newest timestamp in the buffer.
+  google.protobuf.Timestamp newest_timestamp = 5;
 }
 
 // BufferInfoResponse contains information about all ring buffers.
 message BufferInfoResponse {
-  BufferInfo traces_buffer = 1;
-  BufferInfo metrics_buffer = 2;
-  BufferInfo logs_buffer = 3;
+  // Information about each buffer.
+  repeated BufferInfo buffers = 1;
+}
+
+// TelemetryQueryService provides methods to query telemetry data from the ring buffer.
+service TelemetryQueryService {
+  // Query returns telemetry data from the ring buffer based on the request.
+  rpc Query(QueryRequest) returns (QueryResponse);
+  
+  // Subscribe streams telemetry data from the ring buffer based on the request.
+  rpc Subscribe(SubscribeRequest) returns (stream QueryResponse);
+  
+  // GetBufferInfo returns information about the ring buffers.
+  rpc GetBufferInfo(google.protobuf.Empty) returns (BufferInfoResponse);
 }

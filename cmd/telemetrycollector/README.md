@@ -1,156 +1,103 @@
-# Telemetry Query Collector
+# Telemetry Collector with Ring Buffer Query Extension
 
-This is a custom OpenTelemetry Collector that includes a ring buffer processor and a query extension. It allows you to:
+This directory contains the main application for the OpenTelemetry Collector with Ring Buffer Query Extension.
 
-1. Receive telemetry data (traces, metrics, logs) via OTLP
-2. Store the data in configurable in-memory ring buffers
-3. Query the buffered data via a gRPC API
-4. Optionally stream real-time telemetry data
+## Overview
 
-## Features
+The telemetry collector is a custom build of the OpenTelemetry Collector that includes:
 
-- **Ring Buffer Storage**: Configurable in-memory storage for traces, metrics, and logs
-- **Query API**: gRPC API for querying stored telemetry data
-- **Streaming Support**: Real-time streaming of telemetry data as it arrives
-- **Standard OTLP Support**: Compatible with standard OpenTelemetry SDKs and tools
+1. A **Telemetry Buffer Processor** that stores telemetry data in configurable in-memory ring buffers.
+2. A **Telemetry Query Extension** that exposes a gRPC API for querying the buffered data.
 
 ## Building
 
 To build the collector:
 
 ```bash
-cd cmd/telemetrycollector
-go mod tidy
-go build -o telemetrycollector
+go build -o telemetrycollector main.go
 ```
 
 ## Running
 
-Run the collector with the provided configuration:
+To run the collector with the default configuration:
 
 ```bash
-./telemetrycollector --config=config.yaml
+./telemetrycollector
+```
+
+To run with a custom configuration file:
+
+```bash
+./telemetrycollector --config config.yaml
 ```
 
 ## Configuration
 
-The configuration file (`config.yaml`) includes:
+The collector is configured using a YAML file. See `config.yaml` for an example configuration.
 
-### Telemetry Buffer Processor
+Key configuration options:
 
-```yaml
-processors:
-  telemetry_buffer:
-    traces_buffer_size: 10000  # Number of spans to keep in the buffer
-    metrics_buffer_size: 5000  # Number of metric data points to keep in the buffer
-    logs_buffer_size: 5000     # Number of log records to keep in the buffer
+- `telemetry_buffer.traces_buffer_size`: Maximum number of spans to keep in the buffer.
+- `telemetry_buffer.metrics_buffer_size`: Maximum number of metric data points to keep in the buffer.
+- `telemetry_buffer.logs_buffer_size`: Maximum number of log records to keep in the buffer.
+- `telemetry_query.endpoint`: The address and port for the query gRPC server.
+
+## Usage
+
+### Sending Telemetry Data
+
+Send telemetry data to the collector using the OTLP protocol:
+
+- gRPC: `localhost:4317`
+- HTTP: `localhost:4318`
+
+### Querying Telemetry Data
+
+Query the buffered telemetry data using the gRPC API:
+
+```bash
+# Using grpcurl to query traces
+grpcurl -d '{"telemetry_type": "TELEMETRY_TYPE_TRACES"}' \
+  -proto ../../internal/telemetryqueryextension/query_service.proto \
+  localhost:4319 telemetryquery.TelemetryQueryService/Query
+
+# Get buffer info
+grpcurl -proto ../../internal/telemetryqueryextension/query_service.proto \
+  localhost:4319 telemetryquery.TelemetryQueryService/GetBufferInfo
 ```
 
-### Telemetry Query Extension
+### Streaming Telemetry Data
 
-```yaml
-extensions:
-  telemetry_query:
-    endpoint: 0.0.0.0:4319  # gRPC endpoint for the query service
+Subscribe to receive telemetry data in real-time:
+
+```bash
+# Using grpcurl to subscribe to traces
+grpcurl -d '{"telemetry_type": "TELEMETRY_TYPE_TRACES"}' \
+  -proto ../../internal/telemetryqueryextension/query_service.proto \
+  localhost:4319 telemetryquery.TelemetryQueryService/Subscribe
 ```
 
-## Query API
+## Troubleshooting
 
-The query API is exposed as a gRPC service on the configured endpoint. You can use a gRPC client to query the stored telemetry data.
+If you encounter issues:
 
-### Proto Definition
-
-The API is defined in `internal/telemetryqueryextension/query_service.proto`. The main methods are:
-
-- `QueryTraces`: Query stored traces with filters
-- `QueryMetrics`: Query stored metrics with filters
-- `QueryLogs`: Query stored logs with filters
-- `SubscribeTraces`: Stream traces in real-time
-- `SubscribeMetrics`: Stream metrics in real-time
-- `SubscribeLogs`: Stream logs in real-time
-- `GetBufferInfo`: Get information about the ring buffers
-
-### Example Client
-
-Here's an example of how to query traces using a gRPC client:
-
-```go
-package main
-
-import (
-    "context"
-    "log"
-    "time"
-
-    "google.golang.org/grpc"
-    "google.golang.org/protobuf/types/known/timestamppb"
-    pb "path/to/generated/proto"
-)
-
-func main() {
-    conn, err := grpc.Dial("localhost:4319", grpc.WithInsecure())
-    if err != nil {
-        log.Fatalf("Failed to connect: %v", err)
-    }
-    defer conn.Close()
-
-    client := pb.NewTelemetryQueryServiceClient(conn)
-
-    // Query traces from the last 5 minutes
-    now := time.Now()
-    fiveMinutesAgo := now.Add(-5 * time.Minute)
-    
-    req := &pb.TraceQueryRequest{
-        StartTime: timestamppb.New(fiveMinutesAgo),
-        EndTime: timestamppb.New(now),
-        ServiceName: "my-service", // Optional filter by service name
-    }
-
-    resp, err := client.QueryTraces(context.Background(), req)
-    if err != nil {
-        log.Fatalf("Failed to query traces: %v", err)
-    }
-
-    log.Printf("Found %d spans", len(resp.Spans))
-    for _, span := range resp.Spans {
-        log.Printf("Span: %s, TraceID: %s", span.Name, span.TraceId)
-    }
-}
-```
-
-## Streaming Example
-
-To subscribe to real-time traces:
-
-```go
-req := &pb.TraceQueryRequest{
-    ServiceName: "my-service",
-    ImmediateMode: true, // Only receive new spans, not existing ones
-}
-
-stream, err := client.SubscribeTraces(context.Background(), req)
-if err != nil {
-    log.Fatalf("Failed to subscribe: %v", err)
-}
-
-for {
-    resp, err := stream.Recv()
-    if err != nil {
-        log.Fatalf("Stream error: %v", err)
-        break
-    }
-
-    for _, span := range resp.Spans {
-        log.Printf("New span: %s, TraceID: %s", span.Name, span.TraceId)
-    }
-}
-```
+1. Check the collector logs for errors.
+2. Verify that the collector is running and listening on the configured ports.
+3. Ensure that the telemetry data is being sent in the correct format.
+4. Check that the query request is properly formatted.
 
 ## Architecture
 
-The collector consists of two main components:
+The collector uses the following components:
 
-1. **Telemetry Buffer Processor**: Intercepts telemetry data from the pipeline and stores it in ring buffers
-2. **Telemetry Query Extension**: Exposes a gRPC API for querying the stored data
+- **OTLP Receiver**: Receives telemetry data via gRPC or HTTP.
+- **Telemetry Buffer Processor**: Stores telemetry data in ring buffers.
+- **Logging Exporter**: Logs telemetry data for debugging.
+- **Telemetry Query Extension**: Exposes a gRPC API for querying the buffered data.
 
-The ring buffers are thread-safe and support concurrent reads and writes. The processor pushes data into the buffers, and the extension reads from them when handling queries.
+The flow of data is:
+
+1. Telemetry data is received by the OTLP receiver.
+2. The data is processed by the telemetry buffer processor, which stores it in ring buffers.
+3. The data is forwarded to the logging exporter.
+4. The telemetry query extension allows clients to query the buffered data.

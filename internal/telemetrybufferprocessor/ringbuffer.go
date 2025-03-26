@@ -2,111 +2,196 @@ package telemetrybufferprocessor
 
 import (
 	"sync"
+	"time"
 )
 
-// RingBuffer is a thread-safe ring buffer implementation for storing telemetry data.
+// RingBuffer is a thread-safe fixed-size buffer that overwrites the oldest data when full.
 type RingBuffer struct {
 	mu       sync.RWMutex
 	data     []interface{}
 	capacity int
 	head     int
 	size     int
-	// For notifying subscribers about new data
-	subscribers []chan interface{}
 }
 
 // NewRingBuffer creates a new ring buffer with the specified capacity.
 func NewRingBuffer(capacity int) *RingBuffer {
 	return &RingBuffer{
-		data:        make([]interface{}, capacity),
-		capacity:    capacity,
-		subscribers: make([]chan interface{}, 0),
+		data:     make([]interface{}, capacity),
+		capacity: capacity,
+		head:     0,
+		size:     0,
 	}
 }
 
 // Push adds an item to the ring buffer, overwriting the oldest item if the buffer is full.
 func (rb *RingBuffer) Push(item interface{}) {
 	rb.mu.Lock()
+	defer rb.mu.Unlock()
 
-	// Store the item
 	rb.data[rb.head] = item
 	rb.head = (rb.head + 1) % rb.capacity
+
 	if rb.size < rb.capacity {
 		rb.size++
 	}
-
-	// Notify subscribers (non-blocking)
-	for _, ch := range rb.subscribers {
-		select {
-		case ch <- item:
-			// Item sent
-		default:
-			// Channel full, skip notification
-		}
-	}
-
-	rb.mu.Unlock()
 }
 
-// Snapshot returns a copy of all items currently in the buffer in chronological order.
-func (rb *RingBuffer) Snapshot() []interface{} {
+// GetAll returns all items in the ring buffer in chronological order (oldest first).
+func (rb *RingBuffer) GetAll() []interface{} {
 	rb.mu.RLock()
 	defer rb.mu.RUnlock()
 
 	if rb.size == 0 {
-		return nil
+		return []interface{}{}
 	}
 
 	result := make([]interface{}, rb.size)
 
 	// Calculate the index of the oldest item
-	start := (rb.head - rb.size + rb.capacity) % rb.capacity
+	oldest := rb.head
+	if rb.size == rb.capacity {
+		oldest = rb.head
+	} else {
+		oldest = 0
+	}
 
 	// Copy items in chronological order
 	for i := 0; i < rb.size; i++ {
-		idx := (start + i) % rb.capacity
+		idx := (oldest + i) % rb.capacity
 		result[i] = rb.data[idx]
 	}
 
 	return result
 }
 
-// Size returns the current number of items in the buffer.
+// GetByTimeRange returns items within the specified time range.
+func (rb *RingBuffer) GetByTimeRange(startTime, endTime time.Time) []interface{} {
+	rb.mu.RLock()
+	defer rb.mu.RUnlock()
+
+	if rb.size == 0 {
+		return []interface{}{}
+	}
+
+	var result []interface{}
+
+	// Calculate the index of the oldest item
+	oldest := rb.head
+	if rb.size == rb.capacity {
+		oldest = rb.head
+	} else {
+		oldest = 0
+	}
+
+	// Copy items in chronological order that fall within the time range
+	for i := 0; i < rb.size; i++ {
+		idx := (oldest + i) % rb.capacity
+		item := rb.data[idx]
+
+		// Check if the item implements the TelemetryItem interface
+		if telemetryItem, ok := item.(TelemetryItem); ok {
+			timestamp := telemetryItem.GetTimestamp()
+			if (startTime.IsZero() || !timestamp.Before(startTime)) &&
+				(endTime.IsZero() || !timestamp.After(endTime)) {
+				result = append(result, item)
+			}
+		}
+	}
+
+	return result
+}
+
+// GetByTraceID returns items with the specified trace ID.
+func (rb *RingBuffer) GetByTraceID(traceID string) []interface{} {
+	rb.mu.RLock()
+	defer rb.mu.RUnlock()
+
+	if rb.size == 0 || traceID == "" {
+		return []interface{}{}
+	}
+
+	var result []interface{}
+
+	// Calculate the index of the oldest item
+	oldest := rb.head
+	if rb.size == rb.capacity {
+		oldest = rb.head
+	} else {
+		oldest = 0
+	}
+
+	// Copy items that match the trace ID
+	for i := 0; i < rb.size; i++ {
+		idx := (oldest + i) % rb.capacity
+		item := rb.data[idx]
+
+		// Check if the item implements the TelemetryItem interface
+		if telemetryItem, ok := item.(TelemetryItem); ok {
+			if telemetryItem.GetTraceID() == traceID {
+				result = append(result, item)
+			}
+		}
+	}
+
+	return result
+}
+
+// GetByServiceName returns items with the specified service name.
+func (rb *RingBuffer) GetByServiceName(serviceName string) []interface{} {
+	rb.mu.RLock()
+	defer rb.mu.RUnlock()
+
+	if rb.size == 0 || serviceName == "" {
+		return []interface{}{}
+	}
+
+	var result []interface{}
+
+	// Calculate the index of the oldest item
+	oldest := rb.head
+	if rb.size == rb.capacity {
+		oldest = rb.head
+	} else {
+		oldest = 0
+	}
+
+	// Copy items that match the service name
+	for i := 0; i < rb.size; i++ {
+		idx := (oldest + i) % rb.capacity
+		item := rb.data[idx]
+
+		// Check if the item implements the TelemetryItem interface
+		if telemetryItem, ok := item.(TelemetryItem); ok {
+			if telemetryItem.GetServiceName() == serviceName {
+				result = append(result, item)
+			}
+		}
+	}
+
+	return result
+}
+
+// Size returns the current number of items in the ring buffer.
 func (rb *RingBuffer) Size() int {
 	rb.mu.RLock()
 	defer rb.mu.RUnlock()
 	return rb.size
 }
 
-// Capacity returns the maximum capacity of the buffer.
+// Capacity returns the maximum capacity of the ring buffer.
 func (rb *RingBuffer) Capacity() int {
-	rb.mu.RLock()
-	defer rb.mu.RUnlock()
 	return rb.capacity
 }
 
-// Subscribe creates a new subscription channel for receiving new items.
-// The returned channel will receive new items as they are pushed to the buffer.
-// The caller is responsible for closing the channel when done.
-func (rb *RingBuffer) Subscribe(bufferSize int) chan interface{} {
+// Clear removes all items from the ring buffer.
+func (rb *RingBuffer) Clear() {
 	rb.mu.Lock()
 	defer rb.mu.Unlock()
-
-	ch := make(chan interface{}, bufferSize)
-	rb.subscribers = append(rb.subscribers, ch)
-	return ch
-}
-
-// Unsubscribe removes a subscription channel.
-func (rb *RingBuffer) Unsubscribe(ch chan interface{}) {
-	rb.mu.Lock()
-	defer rb.mu.Unlock()
-
-	for i, sub := range rb.subscribers {
-		if sub == ch {
-			// Remove the channel from the slice
-			rb.subscribers = append(rb.subscribers[:i], rb.subscribers[i+1:]...)
-			break
-		}
+	rb.head = 0
+	rb.size = 0
+	// Optionally clear references to help GC
+	for i := range rb.data {
+		rb.data[i] = nil
 	}
 }

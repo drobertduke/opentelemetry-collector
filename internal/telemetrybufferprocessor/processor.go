@@ -2,329 +2,137 @@ package telemetrybufferprocessor
 
 import (
 	"context"
-	"fmt"
-	"time"
-
-	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/plog"
-	"go.opentelemetry.io/collector/pdata/pmetric"
-	"go.opentelemetry.io/collector/pdata/ptrace"
-	"go.opentelemetry.io/collector/processor"
-	"go.uber.org/zap"
+	"log"
+	"sync"
 )
 
-// telemetryBufferProcessor is a processor that buffers telemetry data in memory.
-type telemetryBufferProcessor struct {
-	logger       *zap.Logger
-	config       *Config
-	nextConsumer consumer.Traces
+// TelemetryProcessor is a processor that stores telemetry data in ring buffers.
+type TelemetryProcessor struct {
+	tracesBuffer  *RingBuffer
+	metricsBuffer *RingBuffer
+	logsBuffer    *RingBuffer
+
+	converter OTLPConverter
+
+	mu sync.RWMutex
 }
 
-// Capabilities returns the capabilities of the processor.
-func (tbp *telemetryBufferProcessor) Capabilities() consumer.Capabilities {
-	return consumer.Capabilities{MutatesData: false}
+// NewTelemetryProcessor creates a new TelemetryProcessor with the specified configuration.
+func NewTelemetryProcessor(cfg *Config) *TelemetryProcessor {
+	return &TelemetryProcessor{
+		tracesBuffer:  NewRingBuffer(cfg.TracesBufferSize),
+		metricsBuffer: NewRingBuffer(cfg.MetricsBufferSize),
+		logsBuffer:    NewRingBuffer(cfg.LogsBufferSize),
+	}
 }
 
-// Shutdown stops the processor.
-func (tbp *telemetryBufferProcessor) Shutdown(ctx context.Context) error {
-	// Nothing to do for shutdown
+// SetConverter sets the OTLP converter for the processor.
+func (tp *TelemetryProcessor) SetConverter(converter OTLPConverter) {
+	tp.mu.Lock()
+	defer tp.mu.Unlock()
+	tp.converter = converter
+}
+
+// ProcessTraces processes OTLP trace data and stores it in the traces buffer.
+func (tp *TelemetryProcessor) ProcessTraces(ctx context.Context, data []byte) error {
+	tp.mu.RLock()
+	converter := tp.converter
+	tp.mu.RUnlock()
+
+	if converter == nil {
+		log.Println("No converter set for TelemetryProcessor")
+		return nil
+	}
+
+	spans, err := converter.ConvertTraces(data)
+	if err != nil {
+		return err
+	}
+
+	for _, span := range spans {
+		tp.tracesBuffer.Push(span)
+	}
+
 	return nil
 }
 
-// Start starts the processor.
-func (tbp *telemetryBufferProcessor) Start(ctx context.Context, host component.Host) error {
-	// Nothing to do for start
+// ProcessMetrics processes OTLP metric data and stores it in the metrics buffer.
+func (tp *TelemetryProcessor) ProcessMetrics(ctx context.Context, data []byte) error {
+	tp.mu.RLock()
+	converter := tp.converter
+	tp.mu.RUnlock()
+
+	if converter == nil {
+		log.Println("No converter set for TelemetryProcessor")
+		return nil
+	}
+
+	metrics, err := converter.ConvertMetrics(data)
+	if err != nil {
+		return err
+	}
+
+	for _, metric := range metrics {
+		tp.metricsBuffer.Push(metric)
+	}
+
 	return nil
 }
 
-// newTracesProcessor creates a new processor for traces.
-func newTracesProcessor(logger *zap.Logger, config *Config, nextConsumer consumer.Traces) (*telemetryBufferProcessor, error) {
-	if nextConsumer == nil {
-		return nil, fmt.Errorf("next consumer cannot be nil")
+// ProcessLogs processes OTLP log data and stores it in the logs buffer.
+func (tp *TelemetryProcessor) ProcessLogs(ctx context.Context, data []byte) error {
+	tp.mu.RLock()
+	converter := tp.converter
+	tp.mu.RUnlock()
+
+	if converter == nil {
+		log.Println("No converter set for TelemetryProcessor")
+		return nil
 	}
 
-	// Initialize the ring buffers if they haven't been initialized yet
-	if !IsProcessorActive() {
-		InitBuffers(config.TracesBufferSize, config.MetricsBufferSize, config.LogsBufferSize)
+	logs, err := converter.ConvertLogs(data)
+	if err != nil {
+		return err
 	}
 
-	return &telemetryBufferProcessor{
-		logger:       logger,
-		config:       config,
-		nextConsumer: nextConsumer,
-	}, nil
-}
-
-// ConsumeTraces implements the consumer.Traces interface.
-func (tbp *telemetryBufferProcessor) ConsumeTraces(ctx context.Context, td ptrace.Traces) error {
-	// Process the traces and store them in the ring buffer
-	resourceSpans := td.ResourceSpans()
-	for i := 0; i < resourceSpans.Len(); i++ {
-		rs := resourceSpans.At(i)
-		resource := rs.Resource()
-
-		// Extract resource attributes
-		resourceAttrs := make(map[string]interface{})
-		resource.Attributes().Range(func(k string, v pcommon.Value) bool {
-			resourceAttrs[k] = v.AsString()
-			return true
-		})
-
-		scopeSpans := rs.ScopeSpans()
-		for j := 0; j < scopeSpans.Len(); j++ {
-			ss := scopeSpans.At(j)
-			spans := ss.Spans()
-			for k := 0; k < spans.Len(); k++ {
-				span := spans.At(k)
-
-				// Extract span attributes
-				attrs := make(map[string]interface{})
-				span.Attributes().Range(func(k string, v pcommon.Value) bool {
-					attrs[k] = v.AsString()
-					return true
-				})
-
-				// Create a simplified span data structure
-				spanData := &SpanData{
-					TraceID:       span.TraceID().String(),
-					SpanID:        span.SpanID().String(),
-					ParentSpanID:  span.ParentSpanID().String(),
-					Name:          span.Name(),
-					StartTime:     span.StartTimestamp().AsTime(),
-					EndTime:       span.EndTimestamp().AsTime(),
-					Attributes:    attrs,
-					ResourceAttrs: resourceAttrs,
-					StatusCode:    int32(span.Status().Code()),
-					StatusMessage: span.Status().Message(),
-				}
-
-				// Add the span to the ring buffer
-				GetTracesBuffer().Push(spanData)
-			}
-		}
+	for _, logItem := range logs {
+		tp.logsBuffer.Push(logItem)
 	}
 
-	// Forward the traces to the next consumer
-	return tbp.nextConsumer.ConsumeTraces(ctx, td)
-}
-
-// metricsProcessor is a processor that buffers metrics data in memory.
-type metricsProcessor struct {
-	logger       *zap.Logger
-	config       *Config
-	nextConsumer consumer.Metrics
-}
-
-// Capabilities returns the capabilities of the processor.
-func (mp *metricsProcessor) Capabilities() consumer.Capabilities {
-	return consumer.Capabilities{MutatesData: false}
-}
-
-// Shutdown stops the processor.
-func (mp *metricsProcessor) Shutdown(ctx context.Context) error {
-	// Nothing to do for shutdown
 	return nil
 }
 
-// Start starts the processor.
-func (mp *metricsProcessor) Start(ctx context.Context, host component.Host) error {
-	// Nothing to do for start
-	return nil
+// GetTracesBuffer returns the traces ring buffer.
+func (tp *TelemetryProcessor) GetTracesBuffer() *RingBuffer {
+	return tp.tracesBuffer
 }
 
-// newMetricsProcessor creates a new processor for metrics.
-func newMetricsProcessor(logger *zap.Logger, config *Config, nextConsumer consumer.Metrics) (*metricsProcessor, error) {
-	if nextConsumer == nil {
-		return nil, fmt.Errorf("next consumer cannot be nil")
-	}
-
-	// Initialize the ring buffers if they haven't been initialized yet
-	if !IsProcessorActive() {
-		InitBuffers(config.TracesBufferSize, config.MetricsBufferSize, config.LogsBufferSize)
-	}
-
-	return &metricsProcessor{
-		logger:       logger,
-		config:       config,
-		nextConsumer: nextConsumer,
-	}, nil
+// GetMetricsBuffer returns the metrics ring buffer.
+func (tp *TelemetryProcessor) GetMetricsBuffer() *RingBuffer {
+	return tp.metricsBuffer
 }
 
-// ConsumeMetrics implements the consumer.Metrics interface.
-func (mp *metricsProcessor) ConsumeMetrics(ctx context.Context, md pmetric.Metrics) error {
-	// Process the metrics and store them in the ring buffer
-	resourceMetrics := md.ResourceMetrics()
-	for i := 0; i < resourceMetrics.Len(); i++ {
-		rm := resourceMetrics.At(i)
-		resource := rm.Resource()
-
-		// Extract resource attributes
-		resourceAttrs := make(map[string]interface{})
-		resource.Attributes().Range(func(k string, v pcommon.Value) bool {
-			resourceAttrs[k] = v.AsString()
-			return true
-		})
-
-		scopeMetrics := rm.ScopeMetrics()
-		for j := 0; j < scopeMetrics.Len(); j++ {
-			sm := scopeMetrics.At(j)
-			metrics := sm.Metrics()
-			for k := 0; k < metrics.Len(); k++ {
-				metric := metrics.At(k)
-
-				// Create a simplified metric data structure
-				metricData := &MetricData{
-					Name:          metric.Name(),
-					Description:   metric.Description(),
-					Unit:          metric.Unit(),
-					Type:          metric.Type().String(),
-					Timestamp:     time.Now(), // Use current time as a simplification
-					ResourceAttrs: resourceAttrs,
-				}
-
-				// Add the metric to the ring buffer
-				GetMetricsBuffer().Push(metricData)
-			}
-		}
-	}
-
-	// Forward the metrics to the next consumer
-	return mp.nextConsumer.ConsumeMetrics(ctx, md)
+// GetLogsBuffer returns the logs ring buffer.
+func (tp *TelemetryProcessor) GetLogsBuffer() *RingBuffer {
+	return tp.logsBuffer
 }
 
-// logsProcessor is a processor that buffers logs data in memory.
-type logsProcessor struct {
-	logger       *zap.Logger
-	config       *Config
-	nextConsumer consumer.Logs
+// Global registry to allow the extension to find the processor
+var (
+	globalProcessor     *TelemetryProcessor
+	globalProcessorLock sync.RWMutex
+)
+
+// RegisterProcessor registers a processor in the global registry.
+func RegisterProcessor(processor *TelemetryProcessor) {
+	globalProcessorLock.Lock()
+	defer globalProcessorLock.Unlock()
+	globalProcessor = processor
 }
 
-// Capabilities returns the capabilities of the processor.
-func (lp *logsProcessor) Capabilities() consumer.Capabilities {
-	return consumer.Capabilities{MutatesData: false}
-}
-
-// Shutdown stops the processor.
-func (lp *logsProcessor) Shutdown(ctx context.Context) error {
-	// Nothing to do for shutdown
-	return nil
-}
-
-// Start starts the processor.
-func (lp *logsProcessor) Start(ctx context.Context, host component.Host) error {
-	// Nothing to do for start
-	return nil
-}
-
-// newLogsProcessor creates a new processor for logs.
-func newLogsProcessor(logger *zap.Logger, config *Config, nextConsumer consumer.Logs) (*logsProcessor, error) {
-	if nextConsumer == nil {
-		return nil, fmt.Errorf("next consumer cannot be nil")
-	}
-
-	// Initialize the ring buffers if they haven't been initialized yet
-	if !IsProcessorActive() {
-		InitBuffers(config.TracesBufferSize, config.MetricsBufferSize, config.LogsBufferSize)
-	}
-
-	return &logsProcessor{
-		logger:       logger,
-		config:       config,
-		nextConsumer: nextConsumer,
-	}, nil
-}
-
-// ConsumeLogs implements the consumer.Logs interface.
-func (lp *logsProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
-	// Process the logs and store them in the ring buffer
-	resourceLogs := ld.ResourceLogs()
-	for i := 0; i < resourceLogs.Len(); i++ {
-		rl := resourceLogs.At(i)
-		resource := rl.Resource()
-
-		// Extract resource attributes
-		resourceAttrs := make(map[string]interface{})
-		resource.Attributes().Range(func(k string, v pcommon.Value) bool {
-			resourceAttrs[k] = v.AsString()
-			return true
-		})
-
-		scopeLogs := rl.ScopeLogs()
-		for j := 0; j < scopeLogs.Len(); j++ {
-			sl := scopeLogs.At(j)
-			logs := sl.LogRecords()
-			for k := 0; k < logs.Len(); k++ {
-				log := logs.At(k)
-
-				// Extract log attributes
-				attrs := make(map[string]interface{})
-				log.Attributes().Range(func(k string, v pcommon.Value) bool {
-					attrs[k] = v.AsString()
-					return true
-				})
-
-				// Create a simplified log data structure
-				logData := &LogData{
-					Timestamp:      log.Timestamp().AsTime(),
-					SeverityText:   log.SeverityText(),
-					SeverityNumber: int32(log.SeverityNumber()),
-					Body:           log.Body().AsString(),
-					Attributes:     attrs,
-					ResourceAttrs:  resourceAttrs,
-				}
-
-				// Add the log to the ring buffer
-				GetLogsBuffer().Push(logData)
-			}
-		}
-	}
-
-	// Forward the logs to the next consumer
-	return lp.nextConsumer.ConsumeLogs(ctx, ld)
-}
-
-// NewFactory creates a factory for the telemetry buffer processor.
-func NewFactory() processor.Factory {
-	return processor.NewFactory(
-		component.MustNewType("telemetry_buffer"),
-		createDefaultConfig,
-		processor.WithTraces(createTracesProcessor, component.StabilityLevelDevelopment),
-		processor.WithMetrics(createMetricsProcessor, component.StabilityLevelDevelopment),
-		processor.WithLogs(createLogsProcessor, component.StabilityLevelDevelopment),
-	)
-}
-
-// createTracesProcessor creates a trace processor based on the config.
-func createTracesProcessor(
-	ctx context.Context,
-	set processor.Settings,
-	cfg component.Config,
-	nextConsumer consumer.Traces,
-) (processor.Traces, error) {
-	pCfg := cfg.(*Config)
-	return newTracesProcessor(set.Logger, pCfg, nextConsumer)
-}
-
-// createMetricsProcessor creates a metrics processor based on the config.
-func createMetricsProcessor(
-	ctx context.Context,
-	set processor.Settings,
-	cfg component.Config,
-	nextConsumer consumer.Metrics,
-) (processor.Metrics, error) {
-	pCfg := cfg.(*Config)
-	return newMetricsProcessor(set.Logger, pCfg, nextConsumer)
-}
-
-// createLogsProcessor creates a logs processor based on the config.
-func createLogsProcessor(
-	ctx context.Context,
-	set processor.Settings,
-	cfg component.Config,
-	nextConsumer consumer.Logs,
-) (processor.Logs, error) {
-	pCfg := cfg.(*Config)
-	return newLogsProcessor(set.Logger, pCfg, nextConsumer)
+// GetGlobalProcessor returns the registered processor.
+func GetGlobalProcessor() *TelemetryProcessor {
+	globalProcessorLock.RLock()
+	defer globalProcessorLock.RUnlock()
+	return globalProcessor
 }

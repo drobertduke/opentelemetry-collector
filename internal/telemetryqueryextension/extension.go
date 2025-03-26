@@ -4,73 +4,56 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 
-	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/extension"
-	"go.opentelemetry.io/collector/internal/telemetrybufferprocessor"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
-// telemetryQueryExtension implements the extension.Extension interface.
-type telemetryQueryExtension struct {
-	config      *Config
-	logger      *zap.Logger
-	server      *grpc.Server
-	listener    net.Listener
-	queryServer *queryServiceServer
+// TelemetryQueryExtension implements a gRPC server for querying telemetry data.
+type TelemetryQueryExtension struct {
+	config   *Config
+	server   *grpc.Server
+	listener net.Listener
+	wg       sync.WaitGroup
+}
+
+// NewTelemetryQueryExtension creates a new TelemetryQueryExtension.
+func NewTelemetryQueryExtension(config *Config) (*TelemetryQueryExtension, error) {
+	if err := config.Validate(); err != nil {
+		return nil, err
+	}
+
+	return &TelemetryQueryExtension{
+		config: config,
+	}, nil
 }
 
 // Start starts the gRPC server.
-func (tqe *telemetryQueryExtension) Start(ctx context.Context, host component.Host) error {
-	// Check if the processor is active
-	if !telemetrybufferprocessor.IsProcessorActive() {
-		return fmt.Errorf("telemetry buffer processor is not active, make sure it's configured in the pipeline")
-	}
-
-	// Get the ring buffers from the processor
-	tracesBuffer := telemetrybufferprocessor.GetTracesBuffer()
-	metricsBuffer := telemetrybufferprocessor.GetMetricsBuffer()
-	logsBuffer := telemetrybufferprocessor.GetLogsBuffer()
-
-	if tracesBuffer == nil || metricsBuffer == nil || logsBuffer == nil {
-		return fmt.Errorf("one or more ring buffers are not initialized")
-	}
-
-	// Create the gRPC server
-	server, err := tqe.config.ServerConfig.ToServer(ctx, host, component.TelemetrySettings{
-		Logger: tqe.logger,
-	})
+func (e *TelemetryQueryExtension) Start(ctx context.Context) error {
+	// Create a listener
+	listener, err := net.Listen("tcp", e.config.Endpoint)
 	if err != nil {
-		return fmt.Errorf("failed to create gRPC server: %w", err)
+		return fmt.Errorf("failed to listen on %s: %v", e.config.Endpoint, err)
 	}
-	tqe.server = server
+	e.listener = listener
 
-	// Create and register the query service
-	tqe.queryServer = &queryServiceServer{
-		tracesBuffer:  tracesBuffer,
-		metricsBuffer: metricsBuffer,
-		logsBuffer:    logsBuffer,
-		logger:        tqe.logger,
-	}
+	// Create a gRPC server
+	e.server = grpc.NewServer()
 
-	// Note: RegisterTelemetryQueryServiceServer will be available after generating code from the proto file
-	// For now, we'll comment this out
-	// RegisterTelemetryQueryServiceServer(tqe.server, tqe.queryServer)
+	// Register the query service
+	RegisterTelemetryQueryServiceServer(e.server, NewTelemetryQueryServiceServer())
 
-	// Start listening
-	listener, err := net.Listen(string(tqe.config.ServerConfig.NetAddr.Transport), tqe.config.ServerConfig.NetAddr.Endpoint)
-	if err != nil {
-		return fmt.Errorf("failed to create listener: %w", err)
-	}
-	tqe.listener = listener
-
-	tqe.logger.Info("Starting telemetry query gRPC server", zap.String("endpoint", tqe.config.ServerConfig.NetAddr.Endpoint))
+	// Register reflection service for grpcurl
+	reflection.Register(e.server)
 
 	// Start the server in a goroutine
+	e.wg.Add(1)
 	go func() {
-		if err := tqe.server.Serve(listener); err != nil {
-			tqe.logger.Error("Telemetry query gRPC server failed", zap.Error(err))
+		defer e.wg.Done()
+		fmt.Printf("Starting telemetry query gRPC server on %s\n", e.config.Endpoint)
+		if err := e.server.Serve(listener); err != nil {
+			fmt.Printf("gRPC server error: %v\n", err)
 		}
 	}()
 
@@ -78,46 +61,13 @@ func (tqe *telemetryQueryExtension) Start(ctx context.Context, host component.Ho
 }
 
 // Shutdown stops the gRPC server.
-func (tqe *telemetryQueryExtension) Shutdown(ctx context.Context) error {
-	if tqe.server != nil {
-		tqe.server.GracefulStop()
-		tqe.server = nil
+func (e *TelemetryQueryExtension) Shutdown(ctx context.Context) error {
+	if e.server != nil {
+		e.server.GracefulStop()
 	}
-
-	if tqe.listener != nil {
-		_ = tqe.listener.Close()
-		tqe.listener = nil
+	if e.listener != nil {
+		_ = e.listener.Close()
 	}
-
+	e.wg.Wait()
 	return nil
-}
-
-// NewFactory creates a factory for the telemetry query extension.
-func NewFactory() extension.Factory {
-	typeVal, err := component.NewType("telemetry_query")
-	if err != nil {
-		// This should never happen for a valid type name
-		panic(fmt.Sprintf("failed to create component type: %v", err))
-	}
-
-	return extension.NewFactory(
-		typeVal,
-		createDefaultConfig,
-		createExtension,
-		component.StabilityLevelDevelopment,
-	)
-}
-
-// createExtension creates a new telemetry query extension.
-func createExtension(
-	ctx context.Context,
-	set extension.Settings,
-	cfg component.Config,
-) (extension.Extension, error) {
-	config := cfg.(*Config)
-
-	return &telemetryQueryExtension{
-		config: config,
-		logger: set.Logger,
-	}, nil
 }

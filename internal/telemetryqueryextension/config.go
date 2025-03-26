@@ -1,29 +1,26 @@
 package telemetryqueryextension
 
 import (
-	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config/configgrpc"
-	"go.opentelemetry.io/collector/config/confignet"
+	"fmt"
 )
 
 // Config defines the configuration for the telemetry query extension.
 type Config struct {
-	// ServerConfig defines the gRPC server settings.
-	ServerConfig configgrpc.ServerConfig `mapstructure:",squash"`
+	// Endpoint is the address and port for the query gRPC server.
+	Endpoint string `mapstructure:"endpoint"`
 }
 
 // Validate checks if the extension configuration is valid.
 func (cfg *Config) Validate() error {
-	return cfg.ServerConfig.Validate()
+	if cfg.Endpoint == "" {
+		return fmt.Errorf("endpoint must be specified")
+	}
+	return nil
 }
 
-func createDefaultConfig() component.Config {
+// NewConfig creates a new Config with default values.
+func NewConfig() *Config {
 	return &Config{
-		ServerConfig: configgrpc.ServerConfig{
-			NetAddr: confignet.AddrConfig{
-				Endpoint:  "0.0.0.0:4319", // Default endpoint
-				Transport: confignet.TransportTypeTCP,
-			},
-		},
+		Endpoint: "0.0.0.0:4319",
 	}
 }
