@@ -2,19 +2,15 @@ package telemetrybufferprocessor
 
 import (
 	"fmt"
-
-	"go.opentelemetry.io/collector/component"
 )
 
 // Config defines the configuration for the telemetry buffer processor.
 type Config struct {
-	// TracesBufferSize is the maximum number of spans to keep in the buffer.
+	// TracesBufferSize is the size of the traces ring buffer.
 	TracesBufferSize int `mapstructure:"traces_buffer_size"`
-
-	// MetricsBufferSize is the maximum number of metric data points to keep in the buffer.
+	// MetricsBufferSize is the size of the metrics ring buffer.
 	MetricsBufferSize int `mapstructure:"metrics_buffer_size"`
-
-	// LogsBufferSize is the maximum number of log records to keep in the buffer.
+	// LogsBufferSize is the size of the logs ring buffer.
 	LogsBufferSize int `mapstructure:"logs_buffer_size"`
 }
 
@@ -32,11 +28,11 @@ func (cfg *Config) Validate() error {
 	return nil
 }
 
-// createDefaultConfig creates the default configuration for the processor.
-func createDefaultConfig() component.Config {
+// NewConfig creates a new Config with default values.
+func NewConfig() *Config {
 	return &Config{
 		TracesBufferSize:  10000,
-		MetricsBufferSize: 10000,
+		MetricsBufferSize: 5000,
 		LogsBufferSize:    10000,
 	}
 }

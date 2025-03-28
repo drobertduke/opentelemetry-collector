@@ -2,6 +2,7 @@ package telemetryqueryextension
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -179,13 +180,33 @@ func (s *TelemetryQueryServiceServerImpl) queryTraces(ctx context.Context, req *
 	var filteredItems []interface{}
 	if req.TraceId != "" {
 		// Filter by trace ID
-		filteredItems = buffer.GetByTraceID(req.TraceId)
+		for _, item := range items {
+			if span, ok := item.(*telemetrybufferprocessor.SpanItem); ok {
+				if hex.EncodeToString(span.TraceID) == req.TraceId {
+					filteredItems = append(filteredItems, item)
+				}
+			}
+		}
 	} else if req.ServiceName != "" {
 		// Filter by service name
-		filteredItems = buffer.GetByServiceName(req.ServiceName)
+		for _, item := range items {
+			if span, ok := item.(*telemetrybufferprocessor.SpanItem); ok {
+				if span.ServiceName == req.ServiceName {
+					filteredItems = append(filteredItems, item)
+				}
+			}
+		}
 	} else if !startTime.IsZero() || !endTime.IsZero() {
 		// Filter by time range
-		filteredItems = buffer.GetByTimeRange(startTime, endTime)
+		for _, item := range items {
+			if span, ok := item.(*telemetrybufferprocessor.SpanItem); ok {
+				spanTime := time.Unix(0, int64(span.StartTime))
+				if (!startTime.IsZero() && spanTime.Before(startTime)) || (!endTime.IsZero() && spanTime.After(endTime)) {
+					continue
+				}
+				filteredItems = append(filteredItems, item)
+			}
+		}
 	} else {
 		// No filters, return all items
 		filteredItems = items
@@ -230,10 +251,24 @@ func (s *TelemetryQueryServiceServerImpl) queryMetrics(ctx context.Context, req 
 	var filteredItems []interface{}
 	if req.ServiceName != "" {
 		// Filter by service name
-		filteredItems = buffer.GetByServiceName(req.ServiceName)
+		for _, item := range items {
+			if metric, ok := item.(*telemetrybufferprocessor.MetricItem); ok {
+				if metric.ServiceName == req.ServiceName {
+					filteredItems = append(filteredItems, item)
+				}
+			}
+		}
 	} else if !startTime.IsZero() || !endTime.IsZero() {
 		// Filter by time range
-		filteredItems = buffer.GetByTimeRange(startTime, endTime)
+		for _, item := range items {
+			if metric, ok := item.(*telemetrybufferprocessor.MetricItem); ok {
+				metricTime := time.Unix(0, int64(metric.Timestamp))
+				if (!startTime.IsZero() && metricTime.Before(startTime)) || (!endTime.IsZero() && metricTime.After(endTime)) {
+					continue
+				}
+				filteredItems = append(filteredItems, item)
+			}
+		}
 	} else {
 		// No filters, return all items
 		filteredItems = items
@@ -278,13 +313,33 @@ func (s *TelemetryQueryServiceServerImpl) queryLogs(ctx context.Context, req *Qu
 	var filteredItems []interface{}
 	if req.TraceId != "" {
 		// Filter by trace ID
-		filteredItems = buffer.GetByTraceID(req.TraceId)
+		for _, item := range items {
+			if log, ok := item.(*telemetrybufferprocessor.LogItem); ok {
+				if hex.EncodeToString(log.TraceID) == req.TraceId {
+					filteredItems = append(filteredItems, item)
+				}
+			}
+		}
 	} else if req.ServiceName != "" {
 		// Filter by service name
-		filteredItems = buffer.GetByServiceName(req.ServiceName)
+		for _, item := range items {
+			if log, ok := item.(*telemetrybufferprocessor.LogItem); ok {
+				if log.ServiceName == req.ServiceName {
+					filteredItems = append(filteredItems, item)
+				}
+			}
+		}
 	} else if !startTime.IsZero() || !endTime.IsZero() {
 		// Filter by time range
-		filteredItems = buffer.GetByTimeRange(startTime, endTime)
+		for _, item := range items {
+			if log, ok := item.(*telemetrybufferprocessor.LogItem); ok {
+				logTime := time.Unix(0, int64(log.Timestamp))
+				if (!startTime.IsZero() && logTime.Before(startTime)) || (!endTime.IsZero() && logTime.After(endTime)) {
+					continue
+				}
+				filteredItems = append(filteredItems, item)
+			}
+		}
 	} else {
 		// No filters, return all items
 		filteredItems = items
@@ -378,33 +433,6 @@ func (s *TelemetryQueryServiceServerImpl) convertItemsToResponse(telemetryType T
 	return response
 }
 
-// convertItemToResponse converts a single item to a QueryResponse.
-func (s *TelemetryQueryServiceServerImpl) convertItemToResponse(telemetryType TelemetryType, item interface{}) *QueryResponse {
-	response := &QueryResponse{
-		Spans:   nil,
-		Metrics: nil,
-		Logs:    nil,
-	}
-
-	// Convert item based on the telemetry type
-	switch telemetryType {
-	case TelemetryType_TELEMETRY_TYPE_TRACES:
-		if span, ok := item.(*telemetrybufferprocessor.SpanItem); ok {
-			response.Spans = []*Span{convertSpanToProto(span)}
-		}
-	case TelemetryType_TELEMETRY_TYPE_METRICS:
-		if metric, ok := item.(*telemetrybufferprocessor.MetricItem); ok {
-			response.Metrics = []*MetricDataPoint{convertMetricToProto(metric)}
-		}
-	case TelemetryType_TELEMETRY_TYPE_LOGS:
-		if log, ok := item.(*telemetrybufferprocessor.LogItem); ok {
-			response.Logs = []*LogRecord{convertLogToProto(log)}
-		}
-	}
-
-	return response
-}
-
 // convertSpanToProto converts a SpanItem to a Span proto message.
 func convertSpanToProto(span *telemetrybufferprocessor.SpanItem) *Span {
 	if span == nil {
@@ -412,15 +440,15 @@ func convertSpanToProto(span *telemetrybufferprocessor.SpanItem) *Span {
 	}
 
 	return &Span{
-		TraceId:       span.TraceID,
-		SpanId:        span.SpanID,
-		ParentSpanId:  span.ParentSpanID,
+		TraceId:       hex.EncodeToString(span.TraceID),
+		SpanId:        hex.EncodeToString(span.SpanID),
+		ParentSpanId:  hex.EncodeToString(span.ParentSpanID),
 		Name:          span.Name,
-		Kind:          span.Kind,
-		StartTime:     timestamppb.New(span.StartTime),
-		EndTime:       timestamppb.New(span.EndTime),
-		DurationNanos: span.Duration.Nanoseconds(),
-		StatusCode:    span.StatusCode,
+		Kind:          fmt.Sprintf("%d", span.Kind),
+		StartTime:     timestamppb.New(time.Unix(0, int64(span.StartTime))),
+		EndTime:       timestamppb.New(time.Unix(0, int64(span.EndTime))),
+		DurationNanos: int64(span.EndTime - span.StartTime),
+		StatusCode:    fmt.Sprintf("%d", span.StatusCode),
 		StatusMessage: span.StatusMessage,
 		ServiceName:   span.ServiceName,
 		Attributes:    convertAttributesToProto(span.Attributes),
@@ -434,9 +462,9 @@ func convertLogToProto(log *telemetrybufferprocessor.LogItem) *LogRecord {
 	}
 
 	return &LogRecord{
-		TraceId:        log.TraceID,
-		SpanId:         log.SpanID,
-		Timestamp:      timestamppb.New(log.Timestamp),
+		TraceId:        hex.EncodeToString(log.TraceID),
+		SpanId:         hex.EncodeToString(log.SpanID),
+		Timestamp:      timestamppb.New(time.Unix(0, int64(log.Timestamp))),
 		SeverityText:   log.SeverityText,
 		SeverityNumber: log.SeverityNumber,
 		Body:           log.Body,
@@ -456,7 +484,7 @@ func convertMetricToProto(metric *telemetrybufferprocessor.MetricItem) *MetricDa
 		Description: metric.Description,
 		Unit:        metric.Unit,
 		Type:        metric.Type,
-		Timestamp:   timestamppb.New(metric.Timestamp),
+		Timestamp:   timestamppb.New(time.Unix(0, int64(metric.Timestamp))),
 		ServiceName: metric.ServiceName,
 		Attributes:  convertAttributesToProto(metric.Attributes),
 	}
