@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -25,31 +26,39 @@ func main() {
 	// Register the processor globally
 	telemetrybufferprocessor.RegisterProcessor(processor)
 
-	// Create a gRPC server for the query service
+	// Create and start the telemetry query extension
+	queryConfig := telemetryqueryextension.NewConfig() // This sets endpoint to 0.0.0.0:4319
+	queryExtension, err := telemetryqueryextension.NewTelemetryQueryExtension(queryConfig)
+	if err != nil {
+		log.Fatalf("Failed to create telemetry query extension: %v", err)
+	}
+
+	// Start the extension
+	if err := queryExtension.Start(context.Background()); err != nil {
+		log.Fatalf("Failed to start telemetry query extension: %v", err)
+	}
+
+	// Create a gRPC server for the OTLP receiver
 	grpcServer := grpc.NewServer()
 
-	// Register the query service
-	queryService := telemetryqueryextension.NewTelemetryQueryServiceServer()
-	telemetryqueryextension.RegisterTelemetryQueryServiceServer(grpcServer, queryService)
-
-	// Start the gRPC server
+	// Start the OTLP gRPC server
 	listener, err := net.Listen("tcp", "0.0.0.0:4317")
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+		log.Fatalf("Failed to listen on OTLP port: %v", err)
 	}
 
 	// Start the server in a goroutine
 	go func() {
-		fmt.Println("Starting gRPC server on :4317")
+		fmt.Println("Starting OTLP gRPC server on :4317")
 		if err := grpcServer.Serve(listener); err != nil {
-			log.Fatalf("Failed to serve: %v", err)
+			log.Fatalf("Failed to serve OTLP gRPC: %v", err)
 		}
 	}()
 
-	// Create a separate listener for OTLP data
+	// Create a separate listener for OTLP HTTP data
 	otlpListener, err := net.Listen("tcp", "0.0.0.0:4318")
 	if err != nil {
-		log.Fatalf("Failed to listen for OTLP: %v", err)
+		log.Fatalf("Failed to listen for OTLP HTTP: %v", err)
 	}
 	defer otlpListener.Close()
 
@@ -67,8 +76,14 @@ func main() {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	<-sigCh
 
-	// Gracefully stop the server
+	// Gracefully stop the servers
 	fmt.Println("Shutting down...")
 	grpcServer.GracefulStop()
+
+	// Shutdown the query extension
+	if err := queryExtension.Shutdown(context.Background()); err != nil {
+		log.Printf("Error shutting down query extension: %v", err)
+	}
+
 	fmt.Println("Server stopped")
 }
