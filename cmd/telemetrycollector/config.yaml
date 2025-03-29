@@ -4,9 +4,9 @@ receivers:
   otlp:
     protocols:
       grpc:
-        endpoint: 0.0.0.0:4317
+        endpoint: 0.0.0.0:4327
       http:
-        endpoint: 0.0.0.0:4318
+        endpoint: 0.0.0.0:4328
 
 processors:
   telemetry_buffer:
@@ -20,7 +20,7 @@ exporters:
 
 extensions:
   telemetry_query:
-    endpoint: 0.0.0.0:4319
+    endpoint: 0.0.0.0:4320
 
 service:
   extensions: [telemetry_query]

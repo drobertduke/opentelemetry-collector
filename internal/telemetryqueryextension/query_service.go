@@ -498,6 +498,14 @@ func convertMetricToProto(metric *telemetrybufferprocessor.MetricItem) *MetricDa
 			result.Value = &MetricDataPoint_DoubleValue{DoubleValue: v}
 		case int:
 			result.Value = &MetricDataPoint_IntValue{IntValue: int64(v)}
+		case map[string]interface{}:
+			// Handle histogram, summary, etc.
+			if count, ok := v["count"].(uint64); ok {
+				result.Value = &MetricDataPoint_Count{Count: &Count{Count: int64(count)}}
+			} else {
+				// Default to a count of 0 if we can't determine the type
+				result.Value = &MetricDataPoint_Count{Count: &Count{Count: 0}}
+			}
 		default:
 			// Default to a count of 0 if we can't determine the type
 			result.Value = &MetricDataPoint_Count{Count: &Count{Count: 0}}
