@@ -5,7 +5,7 @@ package telemetryquery;
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
-option go_package = "github.com/dvroom/telemetrycollector/internal/telemetryqueryextension";
+option go_package = "telemetrycollector/internal/telemetryqueryextension";
 
 // TelemetryType defines the type of telemetry data.
 enum TelemetryType {
@@ -15,164 +15,266 @@ enum TelemetryType {
   TELEMETRY_TYPE_LOGS = 3;
 }
 
+// TelemetryQueryService provides methods to query telemetry data from the ring buffer.
+service TelemetryQueryService {
+  // Query retrieves telemetry data from the ring buffer based on the provided filters.
+  rpc Query(QueryRequest) returns (QueryResponse);
+
+  // Subscribe streams telemetry data from the ring buffer as it arrives.
+  rpc Subscribe(SubscribeRequest) returns (stream QueryResponse);
+
+  // GetBufferInfo returns information about the ring buffers.
+  rpc GetBufferInfo(google.protobuf.Empty) returns (BufferInfoResponse);
+}
+
 // QueryRequest is a request to query telemetry data from the ring buffer.
 message QueryRequest {
-  // Type of telemetry data to query.
+  // The type of telemetry data to query.
   TelemetryType telemetry_type = 1;
-  
-  // Optional start time for filtering by time range.
-  google.protobuf.Timestamp start_time = 2;
-  
-  // Optional end time for filtering by time range.
-  google.protobuf.Timestamp end_time = 3;
-  
-  // Optional trace ID for filtering by trace.
-  string trace_id = 4;
-  
-  // Optional service name for filtering by service.
-  string service_name = 5;
-  
-  // Optional maximum number of results to return.
+
+  // Optional trace ID to filter by.
+  string trace_id = 2;
+
+  // Optional service name to filter by.
+  string service_name = 3;
+
+  // Optional start time to filter by.
+  google.protobuf.Timestamp start_time = 4;
+
+  // Optional end time to filter by.
+  google.protobuf.Timestamp end_time = 5;
+
+  // Optional limit on the number of results to return.
   int32 limit = 6;
 }
 
 // SubscribeRequest is a request to subscribe to telemetry data from the ring buffer.
 message SubscribeRequest {
-  // Type of telemetry data to subscribe to.
+  // The type of telemetry data to subscribe to.
   TelemetryType telemetry_type = 1;
-  
-  // Optional start time for filtering by time range.
-  google.protobuf.Timestamp start_time = 2;
-  
-  // Optional trace ID for filtering by trace.
-  string trace_id = 3;
-  
-  // Optional service name for filtering by service.
-  string service_name = 4;
+
+  // Optional trace ID to filter by.
+  string trace_id = 2;
+
+  // Optional service name to filter by.
+  string service_name = 3;
+
+  // Optional start time to filter by.
+  google.protobuf.Timestamp start_time = 4;
 }
 
-// QueryResponse is a response containing telemetry data.
+// QueryResponse contains the telemetry data that matches the query.
 message QueryResponse {
-  // Spans returned for trace queries.
+  // Spans matching the query.
   repeated Span spans = 1;
-  
-  // Metrics returned for metric queries.
+
+  // Metrics matching the query.
   repeated MetricDataPoint metrics = 2;
-  
-  // Logs returned for log queries.
+
+  // Logs matching the query.
   repeated LogRecord logs = 3;
 }
 
-// Span represents a trace span.
-message Span {
-  string trace_id = 1;
-  string span_id = 2;
-  string parent_span_id = 3;
-  string name = 4;
-  string kind = 5;
-  google.protobuf.Timestamp start_time = 6;
-  google.protobuf.Timestamp end_time = 7;
-  int64 duration_nanos = 8;
-  string status_code = 9;
-  string status_message = 10;
-  string service_name = 11;
-  map<string, AttributeValue> attributes = 12;
-}
-
-// LogRecord represents a log record.
-message LogRecord {
-  string trace_id = 1;
-  string span_id = 2;
-  google.protobuf.Timestamp timestamp = 3;
-  string severity_text = 4;
-  int32 severity_number = 5;
-  string body = 6;
-  string service_name = 7;
-  map<string, AttributeValue> attributes = 8;
-}
-
-// MetricDataPoint represents a metric data point.
-message MetricDataPoint {
-  string name = 1;
-  string description = 2;
-  string unit = 3;
-  string type = 4;
-  google.protobuf.Timestamp timestamp = 5;
-  oneof value {
-    int64 int_value = 6;
-    double double_value = 7;
-    Count count = 8;
-  }
-  string service_name = 9;
-  map<string, AttributeValue> attributes = 10;
-}
-
-// Count is a simple count value.
-message Count {
-  int64 count = 1;
-}
-
-// AttributeValue represents a value of an attribute.
-message AttributeValue {
-  oneof value {
-    string string_value = 1;
-    int64 int_value = 2;
-    double double_value = 3;
-    bool bool_value = 4;
-    ArrayValue array_value = 5;
-    KeyValueList kvlist_value = 6;
-    bytes bytes_value = 7;
-  }
-}
-
-// ArrayValue represents an array of values.
-message ArrayValue {
-  repeated AttributeValue values = 1;
-}
-
-// KeyValueList represents a list of key-value pairs.
-message KeyValueList {
-  repeated KeyValue values = 1;
-}
-
-// KeyValue represents a key-value pair.
-message KeyValue {
-  string key = 1;
-  AttributeValue value = 2;
-}
-
-// BufferInfo contains information about a ring buffer.
-message BufferInfo {
-  // Type of telemetry data in the buffer.
-  TelemetryType telemetry_type = 1;
-  
-  // Current number of items in the buffer.
-  int32 size = 2;
-  
-  // Maximum capacity of the buffer.
-  int32 capacity = 3;
-  
-  // Oldest timestamp in the buffer.
-  google.protobuf.Timestamp oldest_timestamp = 4;
-  
-  // Newest timestamp in the buffer.
-  google.protobuf.Timestamp newest_timestamp = 5;
-}
-
-// BufferInfoResponse contains information about all ring buffers.
+// BufferInfoResponse contains information about the ring buffers.
 message BufferInfoResponse {
   // Information about each buffer.
   repeated BufferInfo buffers = 1;
 }
 
-// TelemetryQueryService provides methods to query telemetry data from the ring buffer.
-service TelemetryQueryService {
-  // Query returns telemetry data from the ring buffer based on the request.
-  rpc Query(QueryRequest) returns (QueryResponse);
-  
-  // Subscribe streams telemetry data from the ring buffer based on the request.
-  rpc Subscribe(SubscribeRequest) returns (stream QueryResponse);
-  
-  // GetBufferInfo returns information about the ring buffers.
-  rpc GetBufferInfo(google.protobuf.Empty) returns (BufferInfoResponse);
+// BufferInfo contains information about a ring buffer.
+message BufferInfo {
+  // The type of telemetry data in the buffer.
+  TelemetryType telemetry_type = 1;
+
+  // The current size of the buffer.
+  int32 size = 2;
+
+  // The capacity of the buffer.
+  int32 capacity = 3;
+
+  // The oldest timestamp in the buffer.
+  google.protobuf.Timestamp oldest_timestamp = 4;
+
+  // The newest timestamp in the buffer.
+  google.protobuf.Timestamp newest_timestamp = 5;
+}
+
+// Span represents a trace span.
+message Span {
+  // The trace ID.
+  string trace_id = 1;
+
+  // The span ID.
+  string span_id = 2;
+
+  // The parent span ID.
+  string parent_span_id = 3;
+
+  // The name of the span.
+  string name = 4;
+
+  // The kind of span.
+  string kind = 5;
+
+  // The start time of the span.
+  google.protobuf.Timestamp start_time = 6;
+
+  // The end time of the span.
+  google.protobuf.Timestamp end_time = 7;
+
+  // The duration of the span in nanoseconds.
+  int64 duration_nanos = 8;
+
+  // The status code of the span.
+  string status_code = 9;
+
+  // The status message of the span.
+  string status_message = 10;
+
+  // The service name.
+  string service_name = 11;
+
+  // The attributes of the span.
+  map<string, AttributeValue> attributes = 12;
+}
+
+// MetricDataPoint represents a metric data point.
+message MetricDataPoint {
+  // The name of the metric.
+  string name = 1;
+
+  // The description of the metric.
+  string description = 2;
+
+  // The unit of the metric.
+  string unit = 3;
+
+  // The type of the metric.
+  string type = 4;
+
+  // The timestamp of the metric.
+  google.protobuf.Timestamp timestamp = 5;
+
+  // The service name.
+  string service_name = 6;
+
+  // The attributes of the metric.
+  map<string, AttributeValue> attributes = 7;
+
+  // The value of the metric.
+  oneof value {
+    // The integer value.
+    int64 int_value = 8;
+
+    // The double value.
+    double double_value = 9;
+
+    // The count value.
+    Count count = 10;
+
+    // The histogram value.
+    Histogram histogram = 11;
+  }
+}
+
+// Count represents a count value.
+message Count {
+  // The count value.
+  int64 count = 1;
+}
+
+// Histogram represents a histogram value.
+message Histogram {
+  // The count of values in the histogram.
+  uint64 count = 1;
+
+  // The sum of values in the histogram.
+  double sum = 2;
+
+  // The buckets of the histogram.
+  repeated HistogramBucket buckets = 3;
+}
+
+// HistogramBucket represents a bucket in a histogram.
+message HistogramBucket {
+  // The count of values in the bucket.
+  uint64 count = 1;
+
+  // The upper bound of the bucket.
+  double upper_bound = 2;
+}
+
+// LogRecord represents a log record.
+message LogRecord {
+  // The trace ID.
+  string trace_id = 1;
+
+  // The span ID.
+  string span_id = 2;
+
+  // The timestamp of the log.
+  google.protobuf.Timestamp timestamp = 3;
+
+  // The severity text of the log.
+  string severity_text = 4;
+
+  // The severity number of the log.
+  int32 severity_number = 5;
+
+  // The body of the log.
+  string body = 6;
+
+  // The service name.
+  string service_name = 7;
+
+  // The attributes of the log.
+  map<string, AttributeValue> attributes = 8;
+}
+
+// AttributeValue represents a value of an attribute.
+message AttributeValue {
+  // The value of the attribute.
+  oneof value {
+    // The string value.
+    string string_value = 1;
+
+    // The integer value.
+    int64 int_value = 2;
+
+    // The double value.
+    double double_value = 3;
+
+    // The boolean value.
+    bool bool_value = 4;
+
+    // The bytes value.
+    bytes bytes_value = 5;
+
+    // The array value.
+    ArrayValue array_value = 6;
+
+    // The key-value list value.
+    KeyValueList kvlist_value = 7;
+  }
+}
+
+// ArrayValue represents an array of values.
+message ArrayValue {
+  // The values in the array.
+  repeated AttributeValue values = 1;
+}
+
+// KeyValueList represents a list of key-value pairs.
+message KeyValueList {
+  // The key-value pairs in the list.
+  repeated KeyValue values = 1;
+}
+
+// KeyValue represents a key-value pair.
+message KeyValue {
+  // The key.
+  string key = 1;
+
+  // The value.
+  AttributeValue value = 2;
 }

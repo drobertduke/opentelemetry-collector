@@ -31,9 +31,9 @@ const (
 //
 // TelemetryQueryService provides methods to query telemetry data from the ring buffer.
 type TelemetryQueryServiceClient interface {
-	// Query returns telemetry data from the ring buffer based on the request.
+	// Query retrieves telemetry data from the ring buffer based on the provided filters.
 	Query(ctx context.Context, in *QueryRequest, opts ...grpc.CallOption) (*QueryResponse, error)
-	// Subscribe streams telemetry data from the ring buffer based on the request.
+	// Subscribe streams telemetry data from the ring buffer as it arrives.
 	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[QueryResponse], error)
 	// GetBufferInfo returns information about the ring buffers.
 	GetBufferInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BufferInfoResponse, error)
@@ -92,9 +92,9 @@ func (c *telemetryQueryServiceClient) GetBufferInfo(ctx context.Context, in *emp
 //
 // TelemetryQueryService provides methods to query telemetry data from the ring buffer.
 type TelemetryQueryServiceServer interface {
-	// Query returns telemetry data from the ring buffer based on the request.
+	// Query retrieves telemetry data from the ring buffer based on the provided filters.
 	Query(context.Context, *QueryRequest) (*QueryResponse, error)
-	// Subscribe streams telemetry data from the ring buffer based on the request.
+	// Subscribe streams telemetry data from the ring buffer as it arrives.
 	Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[QueryResponse]) error
 	// GetBufferInfo returns information about the ring buffers.
 	GetBufferInfo(context.Context, *emptypb.Empty) (*BufferInfoResponse, error)

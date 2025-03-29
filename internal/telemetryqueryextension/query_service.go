@@ -491,24 +491,80 @@ func convertMetricToProto(metric *telemetrybufferprocessor.MetricItem) *MetricDa
 
 	// Set the value based on the type
 	if metric.Value != nil {
-		switch v := metric.Value.(type) {
-		case int64:
-			result.Value = &MetricDataPoint_IntValue{IntValue: v}
-		case float64:
-			result.Value = &MetricDataPoint_DoubleValue{DoubleValue: v}
-		case int:
-			result.Value = &MetricDataPoint_IntValue{IntValue: int64(v)}
-		case map[string]interface{}:
-			// Handle histogram, summary, etc.
-			if count, ok := v["count"].(uint64); ok {
-				result.Value = &MetricDataPoint_Count{Count: &Count{Count: int64(count)}}
-			} else {
-				// Default to a count of 0 if we can't determine the type
-				result.Value = &MetricDataPoint_Count{Count: &Count{Count: 0}}
+		switch metric.Type {
+		case "histogram":
+			// For histograms, extract the count, sum, and buckets
+			if histData, ok := metric.Value.(map[string]interface{}); ok {
+				if count, ok := histData["count"].(uint64); ok {
+					result.Value = &MetricDataPoint_Histogram{
+						Histogram: &Histogram{
+							Count: count,
+						},
+					}
+					if sum, ok := histData["sum"].(float64); ok {
+						result.Value.(*MetricDataPoint_Histogram).Histogram.Sum = sum
+					}
+					if buckets, ok := histData["buckets"].([]interface{}); ok {
+						bucketValues := make([]*HistogramBucket, 0, len(buckets))
+						for _, b := range buckets {
+							if bucket, ok := b.(map[string]interface{}); ok {
+								bucketValue := &HistogramBucket{}
+								if count, ok := bucket["count"].(uint64); ok {
+									bucketValue.Count = count
+								}
+								if upperBound, ok := bucket["upper_bound"].(float64); ok {
+									bucketValue.UpperBound = upperBound
+								}
+								bucketValues = append(bucketValues, bucketValue)
+							}
+						}
+						result.Value.(*MetricDataPoint_Histogram).Histogram.Buckets = bucketValues
+					}
+				}
+			} else if count, ok := metric.Value.(uint64); ok {
+				// Simple count for histogram
+				result.Value = &MetricDataPoint_Histogram{
+					Histogram: &Histogram{
+						Count: count,
+					},
+				}
+			}
+		case "gauge", "sum":
+			// For gauge and sum, extract the value
+			switch v := metric.Value.(type) {
+			case int64:
+				result.Value = &MetricDataPoint_IntValue{IntValue: v}
+			case float64:
+				result.Value = &MetricDataPoint_DoubleValue{DoubleValue: v}
+			case int:
+				result.Value = &MetricDataPoint_IntValue{IntValue: int64(v)}
+			case map[string]interface{}:
+				// Handle complex values
+				if count, ok := v["count"].(uint64); ok {
+					result.Value = &MetricDataPoint_Count{Count: &Count{Count: int64(count)}}
+				}
 			}
 		default:
-			// Default to a count of 0 if we can't determine the type
-			result.Value = &MetricDataPoint_Count{Count: &Count{Count: 0}}
+			// Default handling for unknown types
+			switch v := metric.Value.(type) {
+			case int64:
+				result.Value = &MetricDataPoint_IntValue{IntValue: v}
+			case float64:
+				result.Value = &MetricDataPoint_DoubleValue{DoubleValue: v}
+			case int:
+				result.Value = &MetricDataPoint_IntValue{IntValue: int64(v)}
+			case uint64:
+				result.Value = &MetricDataPoint_Count{Count: &Count{Count: int64(v)}}
+			case map[string]interface{}:
+				// Handle complex values
+				if count, ok := v["count"].(uint64); ok {
+					result.Value = &MetricDataPoint_Histogram{
+						Histogram: &Histogram{
+							Count: count,
+						},
+					}
+				}
+			}
 		}
 	}
 

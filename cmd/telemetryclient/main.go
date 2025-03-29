@@ -14,7 +14,7 @@ import (
 
 func main() {
 	// Connect to the server
-	conn, err := grpc.Dial("localhost:4320", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial("localhost:4319", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
@@ -55,6 +55,18 @@ func main() {
 			fmt.Printf("  Value: %f\n", v.DoubleValue)
 		case *pb.MetricDataPoint_Count:
 			fmt.Printf("  Count: %d\n", v.Count.Count)
+		case *pb.MetricDataPoint_Histogram:
+			fmt.Printf("  Histogram:\n")
+			fmt.Printf("    Count: %d\n", v.Histogram.Count)
+			if v.Histogram.Sum != 0 {
+				fmt.Printf("    Sum: %f\n", v.Histogram.Sum)
+			}
+			if len(v.Histogram.Buckets) > 0 {
+				fmt.Printf("    Buckets:\n")
+				for j, bucket := range v.Histogram.Buckets {
+					fmt.Printf("      Bucket %d: Count=%d, UpperBound=%f\n", j, bucket.Count, bucket.UpperBound)
+				}
+			}
 		default:
 			fmt.Printf("  Value: unknown\n")
 		}

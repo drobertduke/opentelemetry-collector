@@ -79,17 +79,17 @@ func (TelemetryType) EnumDescriptor() ([]byte, []int) {
 // QueryRequest is a request to query telemetry data from the ring buffer.
 type QueryRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Type of telemetry data to query.
+	// The type of telemetry data to query.
 	TelemetryType TelemetryType `protobuf:"varint,1,opt,name=telemetry_type,json=telemetryType,proto3,enum=telemetryquery.TelemetryType" json:"telemetry_type,omitempty"`
-	// Optional start time for filtering by time range.
-	StartTime *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
-	// Optional end time for filtering by time range.
-	EndTime *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
-	// Optional trace ID for filtering by trace.
-	TraceId string `protobuf:"bytes,4,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
-	// Optional service name for filtering by service.
-	ServiceName string `protobuf:"bytes,5,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`
-	// Optional maximum number of results to return.
+	// Optional trace ID to filter by.
+	TraceId string `protobuf:"bytes,2,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	// Optional service name to filter by.
+	ServiceName string `protobuf:"bytes,3,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`
+	// Optional start time to filter by.
+	StartTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	// Optional end time to filter by.
+	EndTime *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
+	// Optional limit on the number of results to return.
 	Limit         int32 `protobuf:"varint,6,opt,name=limit,proto3" json:"limit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -132,20 +132,6 @@ func (x *QueryRequest) GetTelemetryType() TelemetryType {
 	return TelemetryType_TELEMETRY_TYPE_UNSPECIFIED
 }
 
-func (x *QueryRequest) GetStartTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.StartTime
-	}
-	return nil
-}
-
-func (x *QueryRequest) GetEndTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.EndTime
-	}
-	return nil
-}
-
 func (x *QueryRequest) GetTraceId() string {
 	if x != nil {
 		return x.TraceId
@@ -160,6 +146,20 @@ func (x *QueryRequest) GetServiceName() string {
 	return ""
 }
 
+func (x *QueryRequest) GetStartTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartTime
+	}
+	return nil
+}
+
+func (x *QueryRequest) GetEndTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EndTime
+	}
+	return nil
+}
+
 func (x *QueryRequest) GetLimit() int32 {
 	if x != nil {
 		return x.Limit
@@ -170,14 +170,14 @@ func (x *QueryRequest) GetLimit() int32 {
 // SubscribeRequest is a request to subscribe to telemetry data from the ring buffer.
 type SubscribeRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Type of telemetry data to subscribe to.
+	// The type of telemetry data to subscribe to.
 	TelemetryType TelemetryType `protobuf:"varint,1,opt,name=telemetry_type,json=telemetryType,proto3,enum=telemetryquery.TelemetryType" json:"telemetry_type,omitempty"`
-	// Optional start time for filtering by time range.
-	StartTime *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
-	// Optional trace ID for filtering by trace.
-	TraceId string `protobuf:"bytes,3,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
-	// Optional service name for filtering by service.
-	ServiceName   string `protobuf:"bytes,4,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`
+	// Optional trace ID to filter by.
+	TraceId string `protobuf:"bytes,2,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	// Optional service name to filter by.
+	ServiceName string `protobuf:"bytes,3,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`
+	// Optional start time to filter by.
+	StartTime     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -219,13 +219,6 @@ func (x *SubscribeRequest) GetTelemetryType() TelemetryType {
 	return TelemetryType_TELEMETRY_TYPE_UNSPECIFIED
 }
 
-func (x *SubscribeRequest) GetStartTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.StartTime
-	}
-	return nil
-}
-
 func (x *SubscribeRequest) GetTraceId() string {
 	if x != nil {
 		return x.TraceId
@@ -240,14 +233,21 @@ func (x *SubscribeRequest) GetServiceName() string {
 	return ""
 }
 
-// QueryResponse is a response containing telemetry data.
+func (x *SubscribeRequest) GetStartTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartTime
+	}
+	return nil
+}
+
+// QueryResponse contains the telemetry data that matches the query.
 type QueryResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Spans returned for trace queries.
+	// Spans matching the query.
 	Spans []*Span `protobuf:"bytes,1,rep,name=spans,proto3" json:"spans,omitempty"`
-	// Metrics returned for metric queries.
+	// Metrics matching the query.
 	Metrics []*MetricDataPoint `protobuf:"bytes,2,rep,name=metrics,proto3" json:"metrics,omitempty"`
-	// Logs returned for log queries.
+	// Logs matching the query.
 	Logs          []*LogRecord `protobuf:"bytes,3,rep,name=logs,proto3" json:"logs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -304,20 +304,160 @@ func (x *QueryResponse) GetLogs() []*LogRecord {
 	return nil
 }
 
+// BufferInfoResponse contains information about the ring buffers.
+type BufferInfoResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Information about each buffer.
+	Buffers       []*BufferInfo `protobuf:"bytes,1,rep,name=buffers,proto3" json:"buffers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BufferInfoResponse) Reset() {
+	*x = BufferInfoResponse{}
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BufferInfoResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BufferInfoResponse) ProtoMessage() {}
+
+func (x *BufferInfoResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BufferInfoResponse.ProtoReflect.Descriptor instead.
+func (*BufferInfoResponse) Descriptor() ([]byte, []int) {
+	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *BufferInfoResponse) GetBuffers() []*BufferInfo {
+	if x != nil {
+		return x.Buffers
+	}
+	return nil
+}
+
+// BufferInfo contains information about a ring buffer.
+type BufferInfo struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The type of telemetry data in the buffer.
+	TelemetryType TelemetryType `protobuf:"varint,1,opt,name=telemetry_type,json=telemetryType,proto3,enum=telemetryquery.TelemetryType" json:"telemetry_type,omitempty"`
+	// The current size of the buffer.
+	Size int32 `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`
+	// The capacity of the buffer.
+	Capacity int32 `protobuf:"varint,3,opt,name=capacity,proto3" json:"capacity,omitempty"`
+	// The oldest timestamp in the buffer.
+	OldestTimestamp *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=oldest_timestamp,json=oldestTimestamp,proto3" json:"oldest_timestamp,omitempty"`
+	// The newest timestamp in the buffer.
+	NewestTimestamp *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=newest_timestamp,json=newestTimestamp,proto3" json:"newest_timestamp,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *BufferInfo) Reset() {
+	*x = BufferInfo{}
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BufferInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BufferInfo) ProtoMessage() {}
+
+func (x *BufferInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BufferInfo.ProtoReflect.Descriptor instead.
+func (*BufferInfo) Descriptor() ([]byte, []int) {
+	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *BufferInfo) GetTelemetryType() TelemetryType {
+	if x != nil {
+		return x.TelemetryType
+	}
+	return TelemetryType_TELEMETRY_TYPE_UNSPECIFIED
+}
+
+func (x *BufferInfo) GetSize() int32 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *BufferInfo) GetCapacity() int32 {
+	if x != nil {
+		return x.Capacity
+	}
+	return 0
+}
+
+func (x *BufferInfo) GetOldestTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OldestTimestamp
+	}
+	return nil
+}
+
+func (x *BufferInfo) GetNewestTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.NewestTimestamp
+	}
+	return nil
+}
+
 // Span represents a trace span.
 type Span struct {
-	state         protoimpl.MessageState     `protogen:"open.v1"`
-	TraceId       string                     `protobuf:"bytes,1,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
-	SpanId        string                     `protobuf:"bytes,2,opt,name=span_id,json=spanId,proto3" json:"span_id,omitempty"`
-	ParentSpanId  string                     `protobuf:"bytes,3,opt,name=parent_span_id,json=parentSpanId,proto3" json:"parent_span_id,omitempty"`
-	Name          string                     `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
-	Kind          string                     `protobuf:"bytes,5,opt,name=kind,proto3" json:"kind,omitempty"`
-	StartTime     *timestamppb.Timestamp     `protobuf:"bytes,6,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
-	EndTime       *timestamppb.Timestamp     `protobuf:"bytes,7,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
-	DurationNanos int64                      `protobuf:"varint,8,opt,name=duration_nanos,json=durationNanos,proto3" json:"duration_nanos,omitempty"`
-	StatusCode    string                     `protobuf:"bytes,9,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
-	StatusMessage string                     `protobuf:"bytes,10,opt,name=status_message,json=statusMessage,proto3" json:"status_message,omitempty"`
-	ServiceName   string                     `protobuf:"bytes,11,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The trace ID.
+	TraceId string `protobuf:"bytes,1,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	// The span ID.
+	SpanId string `protobuf:"bytes,2,opt,name=span_id,json=spanId,proto3" json:"span_id,omitempty"`
+	// The parent span ID.
+	ParentSpanId string `protobuf:"bytes,3,opt,name=parent_span_id,json=parentSpanId,proto3" json:"parent_span_id,omitempty"`
+	// The name of the span.
+	Name string `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	// The kind of span.
+	Kind string `protobuf:"bytes,5,opt,name=kind,proto3" json:"kind,omitempty"`
+	// The start time of the span.
+	StartTime *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	// The end time of the span.
+	EndTime *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
+	// The duration of the span in nanoseconds.
+	DurationNanos int64 `protobuf:"varint,8,opt,name=duration_nanos,json=durationNanos,proto3" json:"duration_nanos,omitempty"`
+	// The status code of the span.
+	StatusCode string `protobuf:"bytes,9,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
+	// The status message of the span.
+	StatusMessage string `protobuf:"bytes,10,opt,name=status_message,json=statusMessage,proto3" json:"status_message,omitempty"`
+	// The service name.
+	ServiceName string `protobuf:"bytes,11,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`
+	// The attributes of the span.
 	Attributes    map[string]*AttributeValue `protobuf:"bytes,12,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -325,7 +465,7 @@ type Span struct {
 
 func (x *Span) Reset() {
 	*x = Span{}
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[3]
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -337,7 +477,7 @@ func (x *Span) String() string {
 func (*Span) ProtoMessage() {}
 
 func (x *Span) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[3]
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -350,7 +490,7 @@ func (x *Span) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Span.ProtoReflect.Descriptor instead.
 func (*Span) Descriptor() ([]byte, []int) {
-	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{3}
+	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Span) GetTraceId() string {
@@ -437,24 +577,381 @@ func (x *Span) GetAttributes() map[string]*AttributeValue {
 	return nil
 }
 
+// MetricDataPoint represents a metric data point.
+type MetricDataPoint struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The name of the metric.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// The description of the metric.
+	Description string `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	// The unit of the metric.
+	Unit string `protobuf:"bytes,3,opt,name=unit,proto3" json:"unit,omitempty"`
+	// The type of the metric.
+	Type string `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
+	// The timestamp of the metric.
+	Timestamp *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// The service name.
+	ServiceName string `protobuf:"bytes,6,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`
+	// The attributes of the metric.
+	Attributes map[string]*AttributeValue `protobuf:"bytes,7,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// The value of the metric.
+	//
+	// Types that are valid to be assigned to Value:
+	//
+	//	*MetricDataPoint_IntValue
+	//	*MetricDataPoint_DoubleValue
+	//	*MetricDataPoint_Count
+	//	*MetricDataPoint_Histogram
+	Value         isMetricDataPoint_Value `protobuf_oneof:"value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MetricDataPoint) Reset() {
+	*x = MetricDataPoint{}
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MetricDataPoint) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MetricDataPoint) ProtoMessage() {}
+
+func (x *MetricDataPoint) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MetricDataPoint.ProtoReflect.Descriptor instead.
+func (*MetricDataPoint) Descriptor() ([]byte, []int) {
+	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *MetricDataPoint) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *MetricDataPoint) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *MetricDataPoint) GetUnit() string {
+	if x != nil {
+		return x.Unit
+	}
+	return ""
+}
+
+func (x *MetricDataPoint) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *MetricDataPoint) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
+}
+
+func (x *MetricDataPoint) GetServiceName() string {
+	if x != nil {
+		return x.ServiceName
+	}
+	return ""
+}
+
+func (x *MetricDataPoint) GetAttributes() map[string]*AttributeValue {
+	if x != nil {
+		return x.Attributes
+	}
+	return nil
+}
+
+func (x *MetricDataPoint) GetValue() isMetricDataPoint_Value {
+	if x != nil {
+		return x.Value
+	}
+	return nil
+}
+
+func (x *MetricDataPoint) GetIntValue() int64 {
+	if x != nil {
+		if x, ok := x.Value.(*MetricDataPoint_IntValue); ok {
+			return x.IntValue
+		}
+	}
+	return 0
+}
+
+func (x *MetricDataPoint) GetDoubleValue() float64 {
+	if x != nil {
+		if x, ok := x.Value.(*MetricDataPoint_DoubleValue); ok {
+			return x.DoubleValue
+		}
+	}
+	return 0
+}
+
+func (x *MetricDataPoint) GetCount() *Count {
+	if x != nil {
+		if x, ok := x.Value.(*MetricDataPoint_Count); ok {
+			return x.Count
+		}
+	}
+	return nil
+}
+
+func (x *MetricDataPoint) GetHistogram() *Histogram {
+	if x != nil {
+		if x, ok := x.Value.(*MetricDataPoint_Histogram); ok {
+			return x.Histogram
+		}
+	}
+	return nil
+}
+
+type isMetricDataPoint_Value interface {
+	isMetricDataPoint_Value()
+}
+
+type MetricDataPoint_IntValue struct {
+	// The integer value.
+	IntValue int64 `protobuf:"varint,8,opt,name=int_value,json=intValue,proto3,oneof"`
+}
+
+type MetricDataPoint_DoubleValue struct {
+	// The double value.
+	DoubleValue float64 `protobuf:"fixed64,9,opt,name=double_value,json=doubleValue,proto3,oneof"`
+}
+
+type MetricDataPoint_Count struct {
+	// The count value.
+	Count *Count `protobuf:"bytes,10,opt,name=count,proto3,oneof"`
+}
+
+type MetricDataPoint_Histogram struct {
+	// The histogram value.
+	Histogram *Histogram `protobuf:"bytes,11,opt,name=histogram,proto3,oneof"`
+}
+
+func (*MetricDataPoint_IntValue) isMetricDataPoint_Value() {}
+
+func (*MetricDataPoint_DoubleValue) isMetricDataPoint_Value() {}
+
+func (*MetricDataPoint_Count) isMetricDataPoint_Value() {}
+
+func (*MetricDataPoint_Histogram) isMetricDataPoint_Value() {}
+
+// Count represents a count value.
+type Count struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The count value.
+	Count         int64 `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Count) Reset() {
+	*x = Count{}
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Count) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Count) ProtoMessage() {}
+
+func (x *Count) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Count.ProtoReflect.Descriptor instead.
+func (*Count) Descriptor() ([]byte, []int) {
+	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *Count) GetCount() int64 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+// Histogram represents a histogram value.
+type Histogram struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The count of values in the histogram.
+	Count uint64 `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
+	// The sum of values in the histogram.
+	Sum float64 `protobuf:"fixed64,2,opt,name=sum,proto3" json:"sum,omitempty"`
+	// The buckets of the histogram.
+	Buckets       []*HistogramBucket `protobuf:"bytes,3,rep,name=buckets,proto3" json:"buckets,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Histogram) Reset() {
+	*x = Histogram{}
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Histogram) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Histogram) ProtoMessage() {}
+
+func (x *Histogram) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Histogram.ProtoReflect.Descriptor instead.
+func (*Histogram) Descriptor() ([]byte, []int) {
+	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *Histogram) GetCount() uint64 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+func (x *Histogram) GetSum() float64 {
+	if x != nil {
+		return x.Sum
+	}
+	return 0
+}
+
+func (x *Histogram) GetBuckets() []*HistogramBucket {
+	if x != nil {
+		return x.Buckets
+	}
+	return nil
+}
+
+// HistogramBucket represents a bucket in a histogram.
+type HistogramBucket struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The count of values in the bucket.
+	Count uint64 `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
+	// The upper bound of the bucket.
+	UpperBound    float64 `protobuf:"fixed64,2,opt,name=upper_bound,json=upperBound,proto3" json:"upper_bound,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HistogramBucket) Reset() {
+	*x = HistogramBucket{}
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HistogramBucket) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HistogramBucket) ProtoMessage() {}
+
+func (x *HistogramBucket) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HistogramBucket.ProtoReflect.Descriptor instead.
+func (*HistogramBucket) Descriptor() ([]byte, []int) {
+	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *HistogramBucket) GetCount() uint64 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+func (x *HistogramBucket) GetUpperBound() float64 {
+	if x != nil {
+		return x.UpperBound
+	}
+	return 0
+}
+
 // LogRecord represents a log record.
 type LogRecord struct {
-	state          protoimpl.MessageState     `protogen:"open.v1"`
-	TraceId        string                     `protobuf:"bytes,1,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
-	SpanId         string                     `protobuf:"bytes,2,opt,name=span_id,json=spanId,proto3" json:"span_id,omitempty"`
-	Timestamp      *timestamppb.Timestamp     `protobuf:"bytes,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	SeverityText   string                     `protobuf:"bytes,4,opt,name=severity_text,json=severityText,proto3" json:"severity_text,omitempty"`
-	SeverityNumber int32                      `protobuf:"varint,5,opt,name=severity_number,json=severityNumber,proto3" json:"severity_number,omitempty"`
-	Body           string                     `protobuf:"bytes,6,opt,name=body,proto3" json:"body,omitempty"`
-	ServiceName    string                     `protobuf:"bytes,7,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`
-	Attributes     map[string]*AttributeValue `protobuf:"bytes,8,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The trace ID.
+	TraceId string `protobuf:"bytes,1,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	// The span ID.
+	SpanId string `protobuf:"bytes,2,opt,name=span_id,json=spanId,proto3" json:"span_id,omitempty"`
+	// The timestamp of the log.
+	Timestamp *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// The severity text of the log.
+	SeverityText string `protobuf:"bytes,4,opt,name=severity_text,json=severityText,proto3" json:"severity_text,omitempty"`
+	// The severity number of the log.
+	SeverityNumber int32 `protobuf:"varint,5,opt,name=severity_number,json=severityNumber,proto3" json:"severity_number,omitempty"`
+	// The body of the log.
+	Body string `protobuf:"bytes,6,opt,name=body,proto3" json:"body,omitempty"`
+	// The service name.
+	ServiceName string `protobuf:"bytes,7,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`
+	// The attributes of the log.
+	Attributes    map[string]*AttributeValue `protobuf:"bytes,8,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *LogRecord) Reset() {
 	*x = LogRecord{}
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[4]
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -466,7 +963,7 @@ func (x *LogRecord) String() string {
 func (*LogRecord) ProtoMessage() {}
 
 func (x *LogRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[4]
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -479,7 +976,7 @@ func (x *LogRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogRecord.ProtoReflect.Descriptor instead.
 func (*LogRecord) Descriptor() ([]byte, []int) {
-	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{4}
+	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *LogRecord) GetTraceId() string {
@@ -538,218 +1035,20 @@ func (x *LogRecord) GetAttributes() map[string]*AttributeValue {
 	return nil
 }
 
-// MetricDataPoint represents a metric data point.
-type MetricDataPoint struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Description string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	Unit        string                 `protobuf:"bytes,3,opt,name=unit,proto3" json:"unit,omitempty"`
-	Type        string                 `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
-	Timestamp   *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	// Types that are valid to be assigned to Value:
-	//
-	//	*MetricDataPoint_IntValue
-	//	*MetricDataPoint_DoubleValue
-	//	*MetricDataPoint_Count
-	Value         isMetricDataPoint_Value    `protobuf_oneof:"value"`
-	ServiceName   string                     `protobuf:"bytes,9,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`
-	Attributes    map[string]*AttributeValue `protobuf:"bytes,10,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *MetricDataPoint) Reset() {
-	*x = MetricDataPoint{}
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *MetricDataPoint) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*MetricDataPoint) ProtoMessage() {}
-
-func (x *MetricDataPoint) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use MetricDataPoint.ProtoReflect.Descriptor instead.
-func (*MetricDataPoint) Descriptor() ([]byte, []int) {
-	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *MetricDataPoint) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *MetricDataPoint) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *MetricDataPoint) GetUnit() string {
-	if x != nil {
-		return x.Unit
-	}
-	return ""
-}
-
-func (x *MetricDataPoint) GetType() string {
-	if x != nil {
-		return x.Type
-	}
-	return ""
-}
-
-func (x *MetricDataPoint) GetTimestamp() *timestamppb.Timestamp {
-	if x != nil {
-		return x.Timestamp
-	}
-	return nil
-}
-
-func (x *MetricDataPoint) GetValue() isMetricDataPoint_Value {
-	if x != nil {
-		return x.Value
-	}
-	return nil
-}
-
-func (x *MetricDataPoint) GetIntValue() int64 {
-	if x != nil {
-		if x, ok := x.Value.(*MetricDataPoint_IntValue); ok {
-			return x.IntValue
-		}
-	}
-	return 0
-}
-
-func (x *MetricDataPoint) GetDoubleValue() float64 {
-	if x != nil {
-		if x, ok := x.Value.(*MetricDataPoint_DoubleValue); ok {
-			return x.DoubleValue
-		}
-	}
-	return 0
-}
-
-func (x *MetricDataPoint) GetCount() *Count {
-	if x != nil {
-		if x, ok := x.Value.(*MetricDataPoint_Count); ok {
-			return x.Count
-		}
-	}
-	return nil
-}
-
-func (x *MetricDataPoint) GetServiceName() string {
-	if x != nil {
-		return x.ServiceName
-	}
-	return ""
-}
-
-func (x *MetricDataPoint) GetAttributes() map[string]*AttributeValue {
-	if x != nil {
-		return x.Attributes
-	}
-	return nil
-}
-
-type isMetricDataPoint_Value interface {
-	isMetricDataPoint_Value()
-}
-
-type MetricDataPoint_IntValue struct {
-	IntValue int64 `protobuf:"varint,6,opt,name=int_value,json=intValue,proto3,oneof"`
-}
-
-type MetricDataPoint_DoubleValue struct {
-	DoubleValue float64 `protobuf:"fixed64,7,opt,name=double_value,json=doubleValue,proto3,oneof"`
-}
-
-type MetricDataPoint_Count struct {
-	Count *Count `protobuf:"bytes,8,opt,name=count,proto3,oneof"`
-}
-
-func (*MetricDataPoint_IntValue) isMetricDataPoint_Value() {}
-
-func (*MetricDataPoint_DoubleValue) isMetricDataPoint_Value() {}
-
-func (*MetricDataPoint_Count) isMetricDataPoint_Value() {}
-
-// Count is a simple count value.
-type Count struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Count         int64                  `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Count) Reset() {
-	*x = Count{}
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Count) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Count) ProtoMessage() {}
-
-func (x *Count) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Count.ProtoReflect.Descriptor instead.
-func (*Count) Descriptor() ([]byte, []int) {
-	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *Count) GetCount() int64 {
-	if x != nil {
-		return x.Count
-	}
-	return 0
-}
-
 // AttributeValue represents a value of an attribute.
 type AttributeValue struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// The value of the attribute.
+	//
 	// Types that are valid to be assigned to Value:
 	//
 	//	*AttributeValue_StringValue
 	//	*AttributeValue_IntValue
 	//	*AttributeValue_DoubleValue
 	//	*AttributeValue_BoolValue
+	//	*AttributeValue_BytesValue
 	//	*AttributeValue_ArrayValue
 	//	*AttributeValue_KvlistValue
-	//	*AttributeValue_BytesValue
 	Value         isAttributeValue_Value `protobuf_oneof:"value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -757,7 +1056,7 @@ type AttributeValue struct {
 
 func (x *AttributeValue) Reset() {
 	*x = AttributeValue{}
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[7]
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -769,7 +1068,7 @@ func (x *AttributeValue) String() string {
 func (*AttributeValue) ProtoMessage() {}
 
 func (x *AttributeValue) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[7]
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -782,7 +1081,7 @@ func (x *AttributeValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AttributeValue.ProtoReflect.Descriptor instead.
 func (*AttributeValue) Descriptor() ([]byte, []int) {
-	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{7}
+	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *AttributeValue) GetValue() isAttributeValue_Value {
@@ -828,6 +1127,15 @@ func (x *AttributeValue) GetBoolValue() bool {
 	return false
 }
 
+func (x *AttributeValue) GetBytesValue() []byte {
+	if x != nil {
+		if x, ok := x.Value.(*AttributeValue_BytesValue); ok {
+			return x.BytesValue
+		}
+	}
+	return nil
+}
+
 func (x *AttributeValue) GetArrayValue() *ArrayValue {
 	if x != nil {
 		if x, ok := x.Value.(*AttributeValue_ArrayValue); ok {
@@ -846,45 +1154,43 @@ func (x *AttributeValue) GetKvlistValue() *KeyValueList {
 	return nil
 }
 
-func (x *AttributeValue) GetBytesValue() []byte {
-	if x != nil {
-		if x, ok := x.Value.(*AttributeValue_BytesValue); ok {
-			return x.BytesValue
-		}
-	}
-	return nil
-}
-
 type isAttributeValue_Value interface {
 	isAttributeValue_Value()
 }
 
 type AttributeValue_StringValue struct {
+	// The string value.
 	StringValue string `protobuf:"bytes,1,opt,name=string_value,json=stringValue,proto3,oneof"`
 }
 
 type AttributeValue_IntValue struct {
+	// The integer value.
 	IntValue int64 `protobuf:"varint,2,opt,name=int_value,json=intValue,proto3,oneof"`
 }
 
 type AttributeValue_DoubleValue struct {
+	// The double value.
 	DoubleValue float64 `protobuf:"fixed64,3,opt,name=double_value,json=doubleValue,proto3,oneof"`
 }
 
 type AttributeValue_BoolValue struct {
+	// The boolean value.
 	BoolValue bool `protobuf:"varint,4,opt,name=bool_value,json=boolValue,proto3,oneof"`
 }
 
+type AttributeValue_BytesValue struct {
+	// The bytes value.
+	BytesValue []byte `protobuf:"bytes,5,opt,name=bytes_value,json=bytesValue,proto3,oneof"`
+}
+
 type AttributeValue_ArrayValue struct {
-	ArrayValue *ArrayValue `protobuf:"bytes,5,opt,name=array_value,json=arrayValue,proto3,oneof"`
+	// The array value.
+	ArrayValue *ArrayValue `protobuf:"bytes,6,opt,name=array_value,json=arrayValue,proto3,oneof"`
 }
 
 type AttributeValue_KvlistValue struct {
-	KvlistValue *KeyValueList `protobuf:"bytes,6,opt,name=kvlist_value,json=kvlistValue,proto3,oneof"`
-}
-
-type AttributeValue_BytesValue struct {
-	BytesValue []byte `protobuf:"bytes,7,opt,name=bytes_value,json=bytesValue,proto3,oneof"`
+	// The key-value list value.
+	KvlistValue *KeyValueList `protobuf:"bytes,7,opt,name=kvlist_value,json=kvlistValue,proto3,oneof"`
 }
 
 func (*AttributeValue_StringValue) isAttributeValue_Value() {}
@@ -895,23 +1201,24 @@ func (*AttributeValue_DoubleValue) isAttributeValue_Value() {}
 
 func (*AttributeValue_BoolValue) isAttributeValue_Value() {}
 
+func (*AttributeValue_BytesValue) isAttributeValue_Value() {}
+
 func (*AttributeValue_ArrayValue) isAttributeValue_Value() {}
 
 func (*AttributeValue_KvlistValue) isAttributeValue_Value() {}
 
-func (*AttributeValue_BytesValue) isAttributeValue_Value() {}
-
 // ArrayValue represents an array of values.
 type ArrayValue struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Values        []*AttributeValue      `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The values in the array.
+	Values        []*AttributeValue `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ArrayValue) Reset() {
 	*x = ArrayValue{}
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[8]
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -923,7 +1230,7 @@ func (x *ArrayValue) String() string {
 func (*ArrayValue) ProtoMessage() {}
 
 func (x *ArrayValue) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[8]
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -936,7 +1243,7 @@ func (x *ArrayValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArrayValue.ProtoReflect.Descriptor instead.
 func (*ArrayValue) Descriptor() ([]byte, []int) {
-	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{8}
+	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ArrayValue) GetValues() []*AttributeValue {
@@ -948,15 +1255,16 @@ func (x *ArrayValue) GetValues() []*AttributeValue {
 
 // KeyValueList represents a list of key-value pairs.
 type KeyValueList struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Values        []*KeyValue            `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The key-value pairs in the list.
+	Values        []*KeyValue `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *KeyValueList) Reset() {
 	*x = KeyValueList{}
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[9]
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -968,7 +1276,7 @@ func (x *KeyValueList) String() string {
 func (*KeyValueList) ProtoMessage() {}
 
 func (x *KeyValueList) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[9]
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -981,7 +1289,7 @@ func (x *KeyValueList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KeyValueList.ProtoReflect.Descriptor instead.
 func (*KeyValueList) Descriptor() ([]byte, []int) {
-	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{9}
+	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *KeyValueList) GetValues() []*KeyValue {
@@ -993,16 +1301,18 @@ func (x *KeyValueList) GetValues() []*KeyValue {
 
 // KeyValue represents a key-value pair.
 type KeyValue struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	Value         *AttributeValue        `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The key.
+	Key string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	// The value.
+	Value         *AttributeValue `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *KeyValue) Reset() {
 	*x = KeyValue{}
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[10]
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1014,7 +1324,7 @@ func (x *KeyValue) String() string {
 func (*KeyValue) ProtoMessage() {}
 
 func (x *KeyValue) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[10]
+	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1027,7 +1337,7 @@ func (x *KeyValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KeyValue.ProtoReflect.Descriptor instead.
 func (*KeyValue) Descriptor() ([]byte, []int) {
-	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{10}
+	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *KeyValue) GetKey() string {
@@ -1044,157 +1354,38 @@ func (x *KeyValue) GetValue() *AttributeValue {
 	return nil
 }
 
-// BufferInfo contains information about a ring buffer.
-type BufferInfo struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Type of telemetry data in the buffer.
-	TelemetryType TelemetryType `protobuf:"varint,1,opt,name=telemetry_type,json=telemetryType,proto3,enum=telemetryquery.TelemetryType" json:"telemetry_type,omitempty"`
-	// Current number of items in the buffer.
-	Size int32 `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`
-	// Maximum capacity of the buffer.
-	Capacity int32 `protobuf:"varint,3,opt,name=capacity,proto3" json:"capacity,omitempty"`
-	// Oldest timestamp in the buffer.
-	OldestTimestamp *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=oldest_timestamp,json=oldestTimestamp,proto3" json:"oldest_timestamp,omitempty"`
-	// Newest timestamp in the buffer.
-	NewestTimestamp *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=newest_timestamp,json=newestTimestamp,proto3" json:"newest_timestamp,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *BufferInfo) Reset() {
-	*x = BufferInfo{}
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *BufferInfo) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*BufferInfo) ProtoMessage() {}
-
-func (x *BufferInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use BufferInfo.ProtoReflect.Descriptor instead.
-func (*BufferInfo) Descriptor() ([]byte, []int) {
-	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *BufferInfo) GetTelemetryType() TelemetryType {
-	if x != nil {
-		return x.TelemetryType
-	}
-	return TelemetryType_TELEMETRY_TYPE_UNSPECIFIED
-}
-
-func (x *BufferInfo) GetSize() int32 {
-	if x != nil {
-		return x.Size
-	}
-	return 0
-}
-
-func (x *BufferInfo) GetCapacity() int32 {
-	if x != nil {
-		return x.Capacity
-	}
-	return 0
-}
-
-func (x *BufferInfo) GetOldestTimestamp() *timestamppb.Timestamp {
-	if x != nil {
-		return x.OldestTimestamp
-	}
-	return nil
-}
-
-func (x *BufferInfo) GetNewestTimestamp() *timestamppb.Timestamp {
-	if x != nil {
-		return x.NewestTimestamp
-	}
-	return nil
-}
-
-// BufferInfoResponse contains information about all ring buffers.
-type BufferInfoResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Information about each buffer.
-	Buffers       []*BufferInfo `protobuf:"bytes,1,rep,name=buffers,proto3" json:"buffers,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *BufferInfoResponse) Reset() {
-	*x = BufferInfoResponse{}
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[12]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *BufferInfoResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*BufferInfoResponse) ProtoMessage() {}
-
-func (x *BufferInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_telemetryqueryextension_query_service_proto_msgTypes[12]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use BufferInfoResponse.ProtoReflect.Descriptor instead.
-func (*BufferInfoResponse) Descriptor() ([]byte, []int) {
-	return file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP(), []int{12}
-}
-
-func (x *BufferInfoResponse) GetBuffers() []*BufferInfo {
-	if x != nil {
-		return x.Buffers
-	}
-	return nil
-}
-
 var File_internal_telemetryqueryextension_query_service_proto protoreflect.FileDescriptor
 
 const file_internal_telemetryqueryextension_query_service_proto_rawDesc = "" +
 	"\n" +
 	"4internal/telemetryqueryextension/query_service.proto\x12\x0etelemetryquery\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"\x9a\x02\n" +
 	"\fQueryRequest\x12D\n" +
-	"\x0etelemetry_type\x18\x01 \x01(\x0e2\x1d.telemetryquery.TelemetryTypeR\rtelemetryType\x129\n" +
+	"\x0etelemetry_type\x18\x01 \x01(\x0e2\x1d.telemetryquery.TelemetryTypeR\rtelemetryType\x12\x19\n" +
+	"\btrace_id\x18\x02 \x01(\tR\atraceId\x12!\n" +
+	"\fservice_name\x18\x03 \x01(\tR\vserviceName\x129\n" +
 	"\n" +
-	"start_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x125\n" +
-	"\bend_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12\x19\n" +
-	"\btrace_id\x18\x04 \x01(\tR\atraceId\x12!\n" +
-	"\fservice_name\x18\x05 \x01(\tR\vserviceName\x12\x14\n" +
+	"start_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x125\n" +
+	"\bend_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12\x14\n" +
 	"\x05limit\x18\x06 \x01(\x05R\x05limit\"\xd1\x01\n" +
 	"\x10SubscribeRequest\x12D\n" +
-	"\x0etelemetry_type\x18\x01 \x01(\x0e2\x1d.telemetryquery.TelemetryTypeR\rtelemetryType\x129\n" +
+	"\x0etelemetry_type\x18\x01 \x01(\x0e2\x1d.telemetryquery.TelemetryTypeR\rtelemetryType\x12\x19\n" +
+	"\btrace_id\x18\x02 \x01(\tR\atraceId\x12!\n" +
+	"\fservice_name\x18\x03 \x01(\tR\vserviceName\x129\n" +
 	"\n" +
-	"start_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x12\x19\n" +
-	"\btrace_id\x18\x03 \x01(\tR\atraceId\x12!\n" +
-	"\fservice_name\x18\x04 \x01(\tR\vserviceName\"\xa5\x01\n" +
+	"start_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\"\xa5\x01\n" +
 	"\rQueryResponse\x12*\n" +
 	"\x05spans\x18\x01 \x03(\v2\x14.telemetryquery.SpanR\x05spans\x129\n" +
 	"\ametrics\x18\x02 \x03(\v2\x1f.telemetryquery.MetricDataPointR\ametrics\x12-\n" +
-	"\x04logs\x18\x03 \x03(\v2\x19.telemetryquery.LogRecordR\x04logs\"\xb1\x04\n" +
+	"\x04logs\x18\x03 \x03(\v2\x19.telemetryquery.LogRecordR\x04logs\"J\n" +
+	"\x12BufferInfoResponse\x124\n" +
+	"\abuffers\x18\x01 \x03(\v2\x1a.telemetryquery.BufferInfoR\abuffers\"\x90\x02\n" +
+	"\n" +
+	"BufferInfo\x12D\n" +
+	"\x0etelemetry_type\x18\x01 \x01(\x0e2\x1d.telemetryquery.TelemetryTypeR\rtelemetryType\x12\x12\n" +
+	"\x04size\x18\x02 \x01(\x05R\x04size\x12\x1a\n" +
+	"\bcapacity\x18\x03 \x01(\x05R\bcapacity\x12E\n" +
+	"\x10oldest_timestamp\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x0foldestTimestamp\x12E\n" +
+	"\x10newest_timestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\x0fnewestTimestamp\"\xb1\x04\n" +
 	"\x04Span\x12\x19\n" +
 	"\btrace_id\x18\x01 \x01(\tR\atraceId\x12\x17\n" +
 	"\aspan_id\x18\x02 \x01(\tR\x06spanId\x12$\n" +
@@ -1215,7 +1406,36 @@ const file_internal_telemetryqueryextension_query_service_proto_rawDesc = "" +
 	"attributes\x1a]\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x124\n" +
-	"\x05value\x18\x02 \x01(\v2\x1e.telemetryquery.AttributeValueR\x05value:\x028\x01\"\xa8\x03\n" +
+	"\x05value\x18\x02 \x01(\v2\x1e.telemetryquery.AttributeValueR\x05value:\x028\x01\"\xb3\x04\n" +
+	"\x0fMetricDataPoint\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x12\n" +
+	"\x04unit\x18\x03 \x01(\tR\x04unit\x12\x12\n" +
+	"\x04type\x18\x04 \x01(\tR\x04type\x128\n" +
+	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12!\n" +
+	"\fservice_name\x18\x06 \x01(\tR\vserviceName\x12O\n" +
+	"\n" +
+	"attributes\x18\a \x03(\v2/.telemetryquery.MetricDataPoint.AttributesEntryR\n" +
+	"attributes\x12\x1d\n" +
+	"\tint_value\x18\b \x01(\x03H\x00R\bintValue\x12#\n" +
+	"\fdouble_value\x18\t \x01(\x01H\x00R\vdoubleValue\x12-\n" +
+	"\x05count\x18\n" +
+	" \x01(\v2\x15.telemetryquery.CountH\x00R\x05count\x129\n" +
+	"\thistogram\x18\v \x01(\v2\x19.telemetryquery.HistogramH\x00R\thistogram\x1a]\n" +
+	"\x0fAttributesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x124\n" +
+	"\x05value\x18\x02 \x01(\v2\x1e.telemetryquery.AttributeValueR\x05value:\x028\x01B\a\n" +
+	"\x05value\"\x1d\n" +
+	"\x05Count\x12\x14\n" +
+	"\x05count\x18\x01 \x01(\x03R\x05count\"n\n" +
+	"\tHistogram\x12\x14\n" +
+	"\x05count\x18\x01 \x01(\x04R\x05count\x12\x10\n" +
+	"\x03sum\x18\x02 \x01(\x01R\x03sum\x129\n" +
+	"\abuckets\x18\x03 \x03(\v2\x1f.telemetryquery.HistogramBucketR\abuckets\"H\n" +
+	"\x0fHistogramBucket\x12\x14\n" +
+	"\x05count\x18\x01 \x01(\x04R\x05count\x12\x1f\n" +
+	"\vupper_bound\x18\x02 \x01(\x01R\n" +
+	"upperBound\"\xa8\x03\n" +
 	"\tLogRecord\x12\x19\n" +
 	"\btrace_id\x18\x01 \x01(\tR\atraceId\x12\x17\n" +
 	"\aspan_id\x18\x02 \x01(\tR\x06spanId\x128\n" +
@@ -1229,38 +1449,18 @@ const file_internal_telemetryqueryextension_query_service_proto_rawDesc = "" +
 	"attributes\x1a]\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x124\n" +
-	"\x05value\x18\x02 \x01(\v2\x1e.telemetryquery.AttributeValueR\x05value:\x028\x01\"\xf8\x03\n" +
-	"\x0fMetricDataPoint\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x12\n" +
-	"\x04unit\x18\x03 \x01(\tR\x04unit\x12\x12\n" +
-	"\x04type\x18\x04 \x01(\tR\x04type\x128\n" +
-	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1d\n" +
-	"\tint_value\x18\x06 \x01(\x03H\x00R\bintValue\x12#\n" +
-	"\fdouble_value\x18\a \x01(\x01H\x00R\vdoubleValue\x12-\n" +
-	"\x05count\x18\b \x01(\v2\x15.telemetryquery.CountH\x00R\x05count\x12!\n" +
-	"\fservice_name\x18\t \x01(\tR\vserviceName\x12O\n" +
-	"\n" +
-	"attributes\x18\n" +
-	" \x03(\v2/.telemetryquery.MetricDataPoint.AttributesEntryR\n" +
-	"attributes\x1a]\n" +
-	"\x0fAttributesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x124\n" +
-	"\x05value\x18\x02 \x01(\v2\x1e.telemetryquery.AttributeValueR\x05value:\x028\x01B\a\n" +
-	"\x05value\"\x1d\n" +
-	"\x05Count\x12\x14\n" +
-	"\x05count\x18\x01 \x01(\x03R\x05count\"\xc8\x02\n" +
+	"\x05value\x18\x02 \x01(\v2\x1e.telemetryquery.AttributeValueR\x05value:\x028\x01\"\xc8\x02\n" +
 	"\x0eAttributeValue\x12#\n" +
 	"\fstring_value\x18\x01 \x01(\tH\x00R\vstringValue\x12\x1d\n" +
 	"\tint_value\x18\x02 \x01(\x03H\x00R\bintValue\x12#\n" +
 	"\fdouble_value\x18\x03 \x01(\x01H\x00R\vdoubleValue\x12\x1f\n" +
 	"\n" +
-	"bool_value\x18\x04 \x01(\bH\x00R\tboolValue\x12=\n" +
-	"\varray_value\x18\x05 \x01(\v2\x1a.telemetryquery.ArrayValueH\x00R\n" +
+	"bool_value\x18\x04 \x01(\bH\x00R\tboolValue\x12!\n" +
+	"\vbytes_value\x18\x05 \x01(\fH\x00R\n" +
+	"bytesValue\x12=\n" +
+	"\varray_value\x18\x06 \x01(\v2\x1a.telemetryquery.ArrayValueH\x00R\n" +
 	"arrayValue\x12A\n" +
-	"\fkvlist_value\x18\x06 \x01(\v2\x1c.telemetryquery.KeyValueListH\x00R\vkvlistValue\x12!\n" +
-	"\vbytes_value\x18\a \x01(\fH\x00R\n" +
-	"bytesValueB\a\n" +
+	"\fkvlist_value\x18\a \x01(\v2\x1c.telemetryquery.KeyValueListH\x00R\vkvlistValueB\a\n" +
 	"\x05value\"D\n" +
 	"\n" +
 	"ArrayValue\x126\n" +
@@ -1269,16 +1469,7 @@ const file_internal_telemetryqueryextension_query_service_proto_rawDesc = "" +
 	"\x06values\x18\x01 \x03(\v2\x18.telemetryquery.KeyValueR\x06values\"R\n" +
 	"\bKeyValue\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x124\n" +
-	"\x05value\x18\x02 \x01(\v2\x1e.telemetryquery.AttributeValueR\x05value\"\x90\x02\n" +
-	"\n" +
-	"BufferInfo\x12D\n" +
-	"\x0etelemetry_type\x18\x01 \x01(\x0e2\x1d.telemetryquery.TelemetryTypeR\rtelemetryType\x12\x12\n" +
-	"\x04size\x18\x02 \x01(\x05R\x04size\x12\x1a\n" +
-	"\bcapacity\x18\x03 \x01(\x05R\bcapacity\x12E\n" +
-	"\x10oldest_timestamp\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x0foldestTimestamp\x12E\n" +
-	"\x10newest_timestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\x0fnewestTimestamp\"J\n" +
-	"\x12BufferInfoResponse\x124\n" +
-	"\abuffers\x18\x01 \x03(\v2\x1a.telemetryquery.BufferInfoR\abuffers*\x7f\n" +
+	"\x05value\x18\x02 \x01(\v2\x1e.telemetryquery.AttributeValueR\x05value*\x7f\n" +
 	"\rTelemetryType\x12\x1e\n" +
 	"\x1aTELEMETRY_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15TELEMETRY_TYPE_TRACES\x10\x01\x12\x1a\n" +
@@ -1287,7 +1478,7 @@ const file_internal_telemetryqueryextension_query_service_proto_rawDesc = "" +
 	"\x15TelemetryQueryService\x12D\n" +
 	"\x05Query\x12\x1c.telemetryquery.QueryRequest\x1a\x1d.telemetryquery.QueryResponse\x12N\n" +
 	"\tSubscribe\x12 .telemetryquery.SubscribeRequest\x1a\x1d.telemetryquery.QueryResponse0\x01\x12K\n" +
-	"\rGetBufferInfo\x12\x16.google.protobuf.Empty\x1a\".telemetryquery.BufferInfoResponseBGZEgithub.com/dvroom/telemetrycollector/internal/telemetryqueryextensionb\x06proto3"
+	"\rGetBufferInfo\x12\x16.google.protobuf.Empty\x1a\".telemetryquery.BufferInfoResponseB5Z3telemetrycollector/internal/telemetryqueryextensionb\x06proto3"
 
 var (
 	file_internal_telemetryqueryextension_query_service_proto_rawDescOnce sync.Once
@@ -1302,68 +1493,72 @@ func file_internal_telemetryqueryextension_query_service_proto_rawDescGZIP() []b
 }
 
 var file_internal_telemetryqueryextension_query_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_internal_telemetryqueryextension_query_service_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_internal_telemetryqueryextension_query_service_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_internal_telemetryqueryextension_query_service_proto_goTypes = []any{
 	(TelemetryType)(0),            // 0: telemetryquery.TelemetryType
 	(*QueryRequest)(nil),          // 1: telemetryquery.QueryRequest
 	(*SubscribeRequest)(nil),      // 2: telemetryquery.SubscribeRequest
 	(*QueryResponse)(nil),         // 3: telemetryquery.QueryResponse
-	(*Span)(nil),                  // 4: telemetryquery.Span
-	(*LogRecord)(nil),             // 5: telemetryquery.LogRecord
-	(*MetricDataPoint)(nil),       // 6: telemetryquery.MetricDataPoint
-	(*Count)(nil),                 // 7: telemetryquery.Count
-	(*AttributeValue)(nil),        // 8: telemetryquery.AttributeValue
-	(*ArrayValue)(nil),            // 9: telemetryquery.ArrayValue
-	(*KeyValueList)(nil),          // 10: telemetryquery.KeyValueList
-	(*KeyValue)(nil),              // 11: telemetryquery.KeyValue
-	(*BufferInfo)(nil),            // 12: telemetryquery.BufferInfo
-	(*BufferInfoResponse)(nil),    // 13: telemetryquery.BufferInfoResponse
-	nil,                           // 14: telemetryquery.Span.AttributesEntry
-	nil,                           // 15: telemetryquery.LogRecord.AttributesEntry
-	nil,                           // 16: telemetryquery.MetricDataPoint.AttributesEntry
-	(*timestamppb.Timestamp)(nil), // 17: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),         // 18: google.protobuf.Empty
+	(*BufferInfoResponse)(nil),    // 4: telemetryquery.BufferInfoResponse
+	(*BufferInfo)(nil),            // 5: telemetryquery.BufferInfo
+	(*Span)(nil),                  // 6: telemetryquery.Span
+	(*MetricDataPoint)(nil),       // 7: telemetryquery.MetricDataPoint
+	(*Count)(nil),                 // 8: telemetryquery.Count
+	(*Histogram)(nil),             // 9: telemetryquery.Histogram
+	(*HistogramBucket)(nil),       // 10: telemetryquery.HistogramBucket
+	(*LogRecord)(nil),             // 11: telemetryquery.LogRecord
+	(*AttributeValue)(nil),        // 12: telemetryquery.AttributeValue
+	(*ArrayValue)(nil),            // 13: telemetryquery.ArrayValue
+	(*KeyValueList)(nil),          // 14: telemetryquery.KeyValueList
+	(*KeyValue)(nil),              // 15: telemetryquery.KeyValue
+	nil,                           // 16: telemetryquery.Span.AttributesEntry
+	nil,                           // 17: telemetryquery.MetricDataPoint.AttributesEntry
+	nil,                           // 18: telemetryquery.LogRecord.AttributesEntry
+	(*timestamppb.Timestamp)(nil), // 19: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 20: google.protobuf.Empty
 }
 var file_internal_telemetryqueryextension_query_service_proto_depIdxs = []int32{
 	0,  // 0: telemetryquery.QueryRequest.telemetry_type:type_name -> telemetryquery.TelemetryType
-	17, // 1: telemetryquery.QueryRequest.start_time:type_name -> google.protobuf.Timestamp
-	17, // 2: telemetryquery.QueryRequest.end_time:type_name -> google.protobuf.Timestamp
+	19, // 1: telemetryquery.QueryRequest.start_time:type_name -> google.protobuf.Timestamp
+	19, // 2: telemetryquery.QueryRequest.end_time:type_name -> google.protobuf.Timestamp
 	0,  // 3: telemetryquery.SubscribeRequest.telemetry_type:type_name -> telemetryquery.TelemetryType
-	17, // 4: telemetryquery.SubscribeRequest.start_time:type_name -> google.protobuf.Timestamp
-	4,  // 5: telemetryquery.QueryResponse.spans:type_name -> telemetryquery.Span
-	6,  // 6: telemetryquery.QueryResponse.metrics:type_name -> telemetryquery.MetricDataPoint
-	5,  // 7: telemetryquery.QueryResponse.logs:type_name -> telemetryquery.LogRecord
-	17, // 8: telemetryquery.Span.start_time:type_name -> google.protobuf.Timestamp
-	17, // 9: telemetryquery.Span.end_time:type_name -> google.protobuf.Timestamp
-	14, // 10: telemetryquery.Span.attributes:type_name -> telemetryquery.Span.AttributesEntry
-	17, // 11: telemetryquery.LogRecord.timestamp:type_name -> google.protobuf.Timestamp
-	15, // 12: telemetryquery.LogRecord.attributes:type_name -> telemetryquery.LogRecord.AttributesEntry
-	17, // 13: telemetryquery.MetricDataPoint.timestamp:type_name -> google.protobuf.Timestamp
-	7,  // 14: telemetryquery.MetricDataPoint.count:type_name -> telemetryquery.Count
-	16, // 15: telemetryquery.MetricDataPoint.attributes:type_name -> telemetryquery.MetricDataPoint.AttributesEntry
-	9,  // 16: telemetryquery.AttributeValue.array_value:type_name -> telemetryquery.ArrayValue
-	10, // 17: telemetryquery.AttributeValue.kvlist_value:type_name -> telemetryquery.KeyValueList
-	8,  // 18: telemetryquery.ArrayValue.values:type_name -> telemetryquery.AttributeValue
-	11, // 19: telemetryquery.KeyValueList.values:type_name -> telemetryquery.KeyValue
-	8,  // 20: telemetryquery.KeyValue.value:type_name -> telemetryquery.AttributeValue
-	0,  // 21: telemetryquery.BufferInfo.telemetry_type:type_name -> telemetryquery.TelemetryType
-	17, // 22: telemetryquery.BufferInfo.oldest_timestamp:type_name -> google.protobuf.Timestamp
-	17, // 23: telemetryquery.BufferInfo.newest_timestamp:type_name -> google.protobuf.Timestamp
-	12, // 24: telemetryquery.BufferInfoResponse.buffers:type_name -> telemetryquery.BufferInfo
-	8,  // 25: telemetryquery.Span.AttributesEntry.value:type_name -> telemetryquery.AttributeValue
-	8,  // 26: telemetryquery.LogRecord.AttributesEntry.value:type_name -> telemetryquery.AttributeValue
-	8,  // 27: telemetryquery.MetricDataPoint.AttributesEntry.value:type_name -> telemetryquery.AttributeValue
-	1,  // 28: telemetryquery.TelemetryQueryService.Query:input_type -> telemetryquery.QueryRequest
-	2,  // 29: telemetryquery.TelemetryQueryService.Subscribe:input_type -> telemetryquery.SubscribeRequest
-	18, // 30: telemetryquery.TelemetryQueryService.GetBufferInfo:input_type -> google.protobuf.Empty
-	3,  // 31: telemetryquery.TelemetryQueryService.Query:output_type -> telemetryquery.QueryResponse
-	3,  // 32: telemetryquery.TelemetryQueryService.Subscribe:output_type -> telemetryquery.QueryResponse
-	13, // 33: telemetryquery.TelemetryQueryService.GetBufferInfo:output_type -> telemetryquery.BufferInfoResponse
-	31, // [31:34] is the sub-list for method output_type
-	28, // [28:31] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	19, // 4: telemetryquery.SubscribeRequest.start_time:type_name -> google.protobuf.Timestamp
+	6,  // 5: telemetryquery.QueryResponse.spans:type_name -> telemetryquery.Span
+	7,  // 6: telemetryquery.QueryResponse.metrics:type_name -> telemetryquery.MetricDataPoint
+	11, // 7: telemetryquery.QueryResponse.logs:type_name -> telemetryquery.LogRecord
+	5,  // 8: telemetryquery.BufferInfoResponse.buffers:type_name -> telemetryquery.BufferInfo
+	0,  // 9: telemetryquery.BufferInfo.telemetry_type:type_name -> telemetryquery.TelemetryType
+	19, // 10: telemetryquery.BufferInfo.oldest_timestamp:type_name -> google.protobuf.Timestamp
+	19, // 11: telemetryquery.BufferInfo.newest_timestamp:type_name -> google.protobuf.Timestamp
+	19, // 12: telemetryquery.Span.start_time:type_name -> google.protobuf.Timestamp
+	19, // 13: telemetryquery.Span.end_time:type_name -> google.protobuf.Timestamp
+	16, // 14: telemetryquery.Span.attributes:type_name -> telemetryquery.Span.AttributesEntry
+	19, // 15: telemetryquery.MetricDataPoint.timestamp:type_name -> google.protobuf.Timestamp
+	17, // 16: telemetryquery.MetricDataPoint.attributes:type_name -> telemetryquery.MetricDataPoint.AttributesEntry
+	8,  // 17: telemetryquery.MetricDataPoint.count:type_name -> telemetryquery.Count
+	9,  // 18: telemetryquery.MetricDataPoint.histogram:type_name -> telemetryquery.Histogram
+	10, // 19: telemetryquery.Histogram.buckets:type_name -> telemetryquery.HistogramBucket
+	19, // 20: telemetryquery.LogRecord.timestamp:type_name -> google.protobuf.Timestamp
+	18, // 21: telemetryquery.LogRecord.attributes:type_name -> telemetryquery.LogRecord.AttributesEntry
+	13, // 22: telemetryquery.AttributeValue.array_value:type_name -> telemetryquery.ArrayValue
+	14, // 23: telemetryquery.AttributeValue.kvlist_value:type_name -> telemetryquery.KeyValueList
+	12, // 24: telemetryquery.ArrayValue.values:type_name -> telemetryquery.AttributeValue
+	15, // 25: telemetryquery.KeyValueList.values:type_name -> telemetryquery.KeyValue
+	12, // 26: telemetryquery.KeyValue.value:type_name -> telemetryquery.AttributeValue
+	12, // 27: telemetryquery.Span.AttributesEntry.value:type_name -> telemetryquery.AttributeValue
+	12, // 28: telemetryquery.MetricDataPoint.AttributesEntry.value:type_name -> telemetryquery.AttributeValue
+	12, // 29: telemetryquery.LogRecord.AttributesEntry.value:type_name -> telemetryquery.AttributeValue
+	1,  // 30: telemetryquery.TelemetryQueryService.Query:input_type -> telemetryquery.QueryRequest
+	2,  // 31: telemetryquery.TelemetryQueryService.Subscribe:input_type -> telemetryquery.SubscribeRequest
+	20, // 32: telemetryquery.TelemetryQueryService.GetBufferInfo:input_type -> google.protobuf.Empty
+	3,  // 33: telemetryquery.TelemetryQueryService.Query:output_type -> telemetryquery.QueryResponse
+	3,  // 34: telemetryquery.TelemetryQueryService.Subscribe:output_type -> telemetryquery.QueryResponse
+	4,  // 35: telemetryquery.TelemetryQueryService.GetBufferInfo:output_type -> telemetryquery.BufferInfoResponse
+	33, // [33:36] is the sub-list for method output_type
+	30, // [30:33] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_internal_telemetryqueryextension_query_service_proto_init() }
@@ -1371,19 +1566,20 @@ func file_internal_telemetryqueryextension_query_service_proto_init() {
 	if File_internal_telemetryqueryextension_query_service_proto != nil {
 		return
 	}
-	file_internal_telemetryqueryextension_query_service_proto_msgTypes[5].OneofWrappers = []any{
+	file_internal_telemetryqueryextension_query_service_proto_msgTypes[6].OneofWrappers = []any{
 		(*MetricDataPoint_IntValue)(nil),
 		(*MetricDataPoint_DoubleValue)(nil),
 		(*MetricDataPoint_Count)(nil),
+		(*MetricDataPoint_Histogram)(nil),
 	}
-	file_internal_telemetryqueryextension_query_service_proto_msgTypes[7].OneofWrappers = []any{
+	file_internal_telemetryqueryextension_query_service_proto_msgTypes[11].OneofWrappers = []any{
 		(*AttributeValue_StringValue)(nil),
 		(*AttributeValue_IntValue)(nil),
 		(*AttributeValue_DoubleValue)(nil),
 		(*AttributeValue_BoolValue)(nil),
+		(*AttributeValue_BytesValue)(nil),
 		(*AttributeValue_ArrayValue)(nil),
 		(*AttributeValue_KvlistValue)(nil),
-		(*AttributeValue_BytesValue)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1391,7 +1587,7 @@ func file_internal_telemetryqueryextension_query_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_telemetryqueryextension_query_service_proto_rawDesc), len(file_internal_telemetryqueryextension_query_service_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   16,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

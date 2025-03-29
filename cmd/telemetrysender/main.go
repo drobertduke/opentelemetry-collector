@@ -17,7 +17,7 @@ import (
 
 func main() {
 	// Connect to the server
-	conn, err := grpc.Dial("localhost:4327", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial("localhost:4317", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
@@ -129,6 +129,62 @@ func main() {
 										},
 										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
 										IsMonotonic:            true,
+									},
+								},
+							},
+							{
+								Name:        "listener.downstream_cx_length_ms",
+								Description: "A test histogram",
+								Unit:        "ms",
+								Data: &metricpb.Metric_Histogram{
+									Histogram: &metricpb.Histogram{
+										DataPoints: []*metricpb.HistogramDataPoint{
+											{
+												TimeUnixNano:   uint64(time.Now().UnixNano()),
+												Count:          1,
+												ExplicitBounds: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
+												BucketCounts:   []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+												Attributes: []*commonpb.KeyValue{
+													{
+														Key: "test.attribute",
+														Value: &commonpb.AnyValue{
+															Value: &commonpb.AnyValue_StringValue{
+																StringValue: "test-value",
+															},
+														},
+													},
+												},
+											},
+										},
+										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+									},
+								},
+							},
+							{
+								Name:        "cluster.internal.upstream_rq_time",
+								Description: "Another test histogram",
+								Unit:        "ms",
+								Data: &metricpb.Metric_Histogram{
+									Histogram: &metricpb.Histogram{
+										DataPoints: []*metricpb.HistogramDataPoint{
+											{
+												TimeUnixNano:   uint64(time.Now().UnixNano()),
+												Count:          4419,
+												ExplicitBounds: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
+												BucketCounts:   []uint64{1000, 1500, 500, 300, 200, 100, 50, 20, 10, 5, 734},
+												Attributes: []*commonpb.KeyValue{
+													{
+														Key: "test.attribute",
+														Value: &commonpb.AnyValue{
+															Value: &commonpb.AnyValue_StringValue{
+																StringValue: "test-value",
+															},
+														},
+													},
+												},
+											},
+										},
+										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
 									},
 								},
 							},
